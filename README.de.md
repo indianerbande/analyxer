@@ -8,6 +8,8 @@ Die App ist in SwiftUI geschrieben, hat keine Swift-Abhängigkeiten von Drittanb
 
 Version 0.4 · macOS 14 oder neuer · getestet auf Apple Silicon mit ARM64-Images von Android 14 bis 16. Intel-Macs sind nicht getestet.
 
+![Steckbrief von Google Maps: Versionen, Umfang, Technik, Auffälligkeiten, Berechtigungen nach Themen und erkannte Bibliotheken](docs/images/profile-de.png)
+
 ## Funktionen
 
 - **Geräte.** Google-Play-Tablets oder -Telefone aus offiziellen Systemimages anlegen, dauerhaft (Apps und Anmeldung bleiben erhalten) oder temporär starten, eigene Geräte umbenennen und löschen. Geräte aus Android Studio erscheinen in einem eigenen Abschnitt und lassen sich starten, aber nie löschen. Jede Karte zeigt das System, etwa „Android 16 · API 36.1 · Google Play · ARM64“.
@@ -17,6 +19,8 @@ Version 0.4 · macOS 14 oder neuer · getestet auf Apple Silicon mit ARM64-Image
 - **Installierte Apps und Gerätepflege.** Alle Apps eines Geräts mit Speicherbedarf, Herkunft und letzter Nutzung auflisten; nach Rückfrage deaktivieren, für den Benutzer entfernen, wiederherstellen oder deinstallieren. Sehen, wo der Speicher bleibt, alle App-Caches leeren und Restordner deinstallierter Apps entfernen. Alles läuft über ADB, ohne Root und ohne App auf dem Gerät.
 - **Werkzeugverwaltung.** Die Einrichtung prüft jedes externe Werkzeug, erklärt, was fehlt, und installiert es auf Wunsch aus der offiziellen Quelle, geprüft gegen die veröffentlichte Prüfsumme.
 - **Englisch und Deutsch.** Die Oberfläche folgt der Systemsprache; **Einrichtung → Sprache** legt sie abweichend fest.
+
+![Geräte: Google-Play-Geräte anlegen, eigene und Android-Studio-Geräte starten; jede Karte zeigt das System](docs/images/devices-de.png)
 
 ## Erste Schritte
 
@@ -71,6 +75,8 @@ Die englischen Seiten in [docs](docs) sind die Hauptfassung.
 Analyxer ist für Apps gedacht, die du untersuchen darfst: eigene Apps, Apps, die du im Auftrag ihres Inhabers testest, und Forschung, die das Gesetz und die für dich geltenden Bedingungen beachtet. Dekompilieren, Beobachten oder Weitergeben fremder Apps kann durch Urheberrecht, Lizenzbedingungen oder örtliches Recht eingeschränkt sein. Die Gerätepflege nicht auf Geräten verwenden, die dir nicht gehören oder die du nicht verwaltest. Du bist verantwortlich dafür, was du analysierst und was du mit den Ergebnissen tust.
 
 Die Beobachtung über Frida benötigt ein vorbereitetes Analysegerät. Die App rootet keine Geräte, installiert keine Zertifikate und umgeht kein Zertifikat-Pinning.
+
+Sicherheitsprobleme in Analyxer bitte vertraulich melden, wie in [SECURITY.md](SECURITY.md) (englisch) beschrieben.
 
 ## Entwicklung
 

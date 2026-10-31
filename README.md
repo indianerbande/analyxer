@@ -8,6 +8,8 @@ The app is written in SwiftUI, has no third-party Swift dependencies and runs ev
 
 Version 0.4 · macOS 14 or later · tested on Apple Silicon with ARM64 images of Android 14 to 16. Intel Macs are untested.
 
+![App profile of Google Maps: versions, size, technology, notable points, permissions by topic and detected libraries](docs/images/profile.png)
+
 ## Features
 
 - **Devices.** Create Google Play tablets or phones from official system images, start them permanently (apps and sign-in survive) or temporarily, rename and delete your own devices. Devices from Android Studio appear in a separate section and can be started, but never deleted. Every card shows the system, e.g. "Android 16 · API 36.1 · Google Play · ARM64".
@@ -17,6 +19,8 @@ Version 0.4 · macOS 14 or later · tested on Apple Silicon with ARM64 images of
 - **Installed apps and device care.** List all apps of a device with storage, origin and last use; disable, remove for the user, restore or uninstall them after confirmation. See where storage goes, clear all app caches and remove leftover folders of uninstalled apps. Everything works over ADB, without root and without an app on the device.
 - **Tool manager.** Setup checks every external tool, explains what is missing and installs it on request from the official source, verified against the published checksum.
 - **English and German.** The interface follows the system language; Setup → Language overrides it.
+
+![Devices: create Google Play devices, start your own and Android Studio devices; each card shows the system](docs/images/devices.png)
 
 ## Getting started
 
@@ -71,6 +75,8 @@ German versions are in [docs/de](docs/de).
 Analyxer is meant for apps you are allowed to examine: your own apps, apps you test on behalf of their owner, and research that respects the law and the terms that apply to you. Decompiling, observing or redistributing someone else's app may be restricted by copyright, licence terms or local law. Do not use the device care functions on devices you do not own or manage. You are responsible for what you analyse and what you do with the results.
 
 Observation through Frida needs a prepared analysis device. The app does not root devices, does not install certificates and does not bypass certificate pinning.
+
+Please report security problems in Analyxer privately, as described in [SECURITY.md](SECURITY.md).
 
 ## Development
 
