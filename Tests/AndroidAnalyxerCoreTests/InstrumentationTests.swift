@@ -60,7 +60,7 @@ final class InstrumentationTests: XCTestCase {
         let request = InstrumentationRequest(probes: [instrumentProbe])
         let result = try InstrumentationService.parseEvidence(instrumentEvidence(events: [["kind":"installed", "probe":0]]), expectedPID: 42, request: request)
         XCTAssertEqual(result.invocations, 0)
-        XCTAssertTrue(result.warnings.contains { $0.contains("kein Aufruf") })
+        XCTAssertTrue(result.warnings.contains { $0.contains("no call observed") })
         XCTAssertThrowsError(try InstrumentationService.parseEvidence(instrumentEvidence(events: [["kind":"setup-error", "message":"class missing"]]), expectedPID: 42, request: request))
         XCTAssertThrowsError(try InstrumentationService.parseEvidence(instrumentEvidence(events: [["kind":"installed", "probe":0]], pid: 43), expectedPID: 42, request: request))
     }

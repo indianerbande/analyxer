@@ -12,15 +12,15 @@ struct AnalysisProjectView: View {
         VStack(alignment: .leading, spacing: 24) {
             HStack {
                 if model.project != nil {
-                    Button("Zur Übersicht", systemImage: "chevron.left") { model.closeProject() }
-                        .help("Projekt schließen und zur Projektübersicht zurückkehren")
+                    Button("Back to Overview", systemImage: "chevron.left") { model.closeProject() }
+                        .help("Close the project and return to the project overview")
                 }
-                Button("Neues Projekt aus APK …", systemImage: "plus") { model.chooseAPK() }.buttonStyle(.borderedProminent)
-                Button("Projekt öffnen …", systemImage: "folder") { model.chooseProject() }
+                Button("New Project from APK …", systemImage: "plus") { model.chooseAPK() }.buttonStyle(.borderedProminent)
+                Button("Open Project …", systemImage: "folder") { model.chooseProject() }
                 Spacer()
                 if model.project != nil {
-                    Button("Gesamtexport …", systemImage: "square.and.arrow.up") { model.exportProject() }
-                    Button("Im Finder") { if let root = model.projectDirectory { NSWorkspace.shared.activateFileViewerSelecting([root]) } }
+                    Button("Export All …", systemImage: "square.and.arrow.up") { model.exportProject() }
+                    Button("Show in Finder") { if let root = model.projectDirectory { NSWorkspace.shared.activateFileViewerSelecting([root]) } }
                 }
             }.disabled(model.busy)
             if let project = model.project {
@@ -33,14 +33,14 @@ struct AnalysisProjectView: View {
             } else {
                 VStack(alignment: .leading, spacing: 16) {
                     Image(systemName: "folder.badge.gearshape").font(.system(size: 40)).foregroundStyle(accent)
-                    Text("Von der APK zum nachvollziehbaren Befund").font(.title2.weight(.semibold))
-                    Text("1. APK öffnen und Projektordner wählen\n2. Manifest, Berechtigungen und DEX-Inventar prüfen\n3. Testsitzung mit einem Android-Gerät beginnen\n4. App installieren, starten und Beobachtungen speichern")
+                    Text("From the APK to a traceable finding").font(.title2.weight(.semibold))
+                    Text("1. Open an APK and choose a project folder\n2. Check the manifest, permissions and DEX inventory\n3. Start a test session with an Android device\n4. Install and launch the app, then save observations")
                         .lineSpacing(9).foregroundStyle(.secondary)
-                    Text("Jedes Projekt enthält eine eigene APK-Kopie. Berichte, Logs, Screenshots und Notizen bleiben zusammen und lassen sich später wieder öffnen.")
+                    Text("Every project contains its own copy of the APK. Reports, logs, screenshots and notes stay together and can be opened again later.")
                         .font(.callout).foregroundStyle(.secondary)
                 }.padding(26).projectCard()
                 if !model.recentProjects.isEmpty {
-                    Text("Zuletzt geöffnete Projekte").font(.headline)
+                    Text("Recently Opened Projects").font(.headline)
                     ForEach(model.recentProjects, id: \.self) { path in
                         Button { model.openProject(URL(fileURLWithPath: path)) } label: {
                             HStack {
@@ -63,20 +63,20 @@ struct AnalysisProjectView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("SHA-256  " + project.analysis.apk.sha256).font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary).textSelection(.enabled)
             if let source = project.installedSource {
-                Text("Vom Gerät importiert · \(project.apkFiles.count) APKs · \(source.serial). Manifest-Angaben stammen aus der Basis-APK; weitere APKs einzeln unter Codeanalyse auswählen.")
+                Text("Imported from the device · APKs: \(project.apkFiles.count) · \(source.serial). Manifest details come from the base APK; choose further APKs individually under code analysis.")
                     .font(.caption).foregroundStyle(.secondary)
             }
-            Text("Version \(project.analysis.manifest.versionName ?? "unbekannt") · minSdk \(project.analysis.manifest.minSDK ?? "nicht deklariert") · targetSdk \(project.analysis.manifest.targetSDK ?? "nicht deklariert")")
+            Text("Version \(project.analysis.manifest.versionName ?? String(localized: "unknown")) · minSdk \(project.analysis.manifest.minSDK ?? String(localized: "not declared")) · targetSdk \(project.analysis.manifest.targetSDK ?? String(localized: "not declared"))")
                 .font(.callout).foregroundStyle(.secondary)
             HStack {
                 ForEach(project.evidence.filter { $0.sessionID == nil && [.staticReport, .manifest, .dex].contains($0.kind) }) { item in
                     Button(item.kind.title, systemImage: "doc.text.magnifyingglass") { model.showEvidence(item) }
                 }
             }.disabled(model.busy)
-            DisclosureGroup("Komponenten und deklarierte Erreichbarkeit") {
+            DisclosureGroup("Components and Declared Reachability") {
                 VStack(alignment: .leading, spacing: 12) {
-                    TextField("Name oder Komponententyp filtern …", text: $componentFilter).textFieldStyle(.roundedBorder)
-                    Text("exported ist der explizite Manifest-Wert. Nicht deklarierte Werte, Berechtigungen und tatsächliche Erreichbarkeit müssen gesondert geprüft werden.")
+                    TextField("Filter by name or component type …", text: $componentFilter).textFieldStyle(.roundedBorder)
+                    Text("exported is the explicit manifest value. Undeclared values, permissions and actual reachability must be checked separately.")
                         .font(.caption).foregroundStyle(.secondary)
                     LazyVStack(alignment: .leading, spacing: 12) {
                         ForEach(project.analysis.manifest.components.filter { componentFilter.isEmpty || ($0.name + $0.kind).localizedCaseInsensitiveContains(componentFilter) }) { item in
@@ -84,17 +84,17 @@ struct AnalysisProjectView: View {
                                 HStack {
                                     Text(item.kind.uppercased()).font(.system(size: 10, weight: .semibold)).foregroundStyle(accent)
                                     Spacer()
-                                    Text("exported: \(item.exportDescription)").font(.caption)
+                                    Text(verbatim: "exported: \(item.exported ?? String(localized: "not declared"))").font(.caption)
                                 }
                                 Text(item.name).font(.system(size: 12, design: .monospaced)).textSelection(.enabled)
-                                if let permission = item.permission { Text("Berechtigung: \(permission)").font(.caption).foregroundStyle(.secondary) }
+                                if let permission = item.permission { Text("Permission: \(permission)").font(.caption).foregroundStyle(.secondary) }
                                 ForEach(item.actions, id: \.self) { Text($0).font(.caption).foregroundStyle(.secondary) }
                             }.padding(12).projectCard()
                         }
                     }
                 }.padding(.top, 12)
             }
-            DisclosureGroup("Berechtigungen und Grenzen") {
+            DisclosureGroup("Permissions and Limitations") {
                 VStack(alignment: .leading, spacing: 8) {
                     ForEach(project.analysis.apk.permissions, id: \.self) { Text($0).font(.system(size: 12, design: .monospaced)).textSelection(.enabled) }
                     Divider()
@@ -104,73 +104,73 @@ struct AnalysisProjectView: View {
         }.padding(.top, 14)
         } label: {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Details & Belege").font(.headline)
-                Text("Hash, Werkzeugbericht, Manifest, DEX-Inventar, alle \(project.analysis.manifest.components.count) Komponenten und die Rohliste der Berechtigungen").font(.caption).foregroundStyle(.secondary)
+                Text("Details & Evidence").font(.headline)
+                Text("Hash, tool report, manifest, DEX inventory, all components (\(project.analysis.manifest.components.count)) and the raw list of permissions").font(.caption).foregroundStyle(.secondary)
             }
         }.padding(20).projectCard()
     }
     private func runtime(_ project: AnalysisProject) -> some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("1 · Im Android-Gerät testen").font(.headline)
+            Text("1 · Test on an Android Device").font(.headline)
             HStack {
-                Picker("Zielgerät", selection: $model.serial) {
-                    Text("Gerät auswählen").tag("")
+                Picker("Target device", selection: $model.serial) {
+                    Text("Choose a device").tag("")
                     ForEach(model.devices) { device in
                         Text("\(device.avdName ?? device.model) · \(device.serial) · \(device.state)").tag(device.serial)
                     }
                 }.disabled(model.busy)
-                Button("Emulatoren") { model.page = .devices }
+                Button("Emulators") { model.page = .devices }
             }
             if let session = model.activeSession {
-                Text("Aktive Sitzung: \(session.device.serial) · Android \(session.device.properties["ro.build.version.release"] ?? "?") · \(session.device.properties["ro.product.cpu.abi"] ?? "?")")
+                Text("Active session: \(session.device.serial) · Android \(session.device.properties["ro.build.version.release"] ?? "?") · \(session.device.properties["ro.product.cpu.abi"] ?? "?")")
                     .font(.caption).foregroundStyle(accent)
                 if !model.projectSessionSelected {
-                    Text("Für diese Sitzung das gebundene Gerät auswählen. Bei einem anderen Gerät oder Neustart eine neue Sitzung beginnen.").font(.caption).foregroundStyle(.orange)
+                    Text("Choose the device bound to this session. For another device or after a restart, start a new session.").font(.caption).foregroundStyle(.orange)
                 }
                 HStack {
-                    Button("Installierte App zuordnen") { model.projectAdoptInstalled() }
-                    Button("APKs installieren", systemImage: "arrow.down.app") { model.projectInstall() }
-                    Button("Projekt-App starten", systemImage: "play.fill") { model.projectLaunch() }.disabled(!model.projectInstalled)
-                    Button("Screenshot speichern", systemImage: "camera") { model.projectScreenshot() }
-                    Button("App-Logcat speichern", systemImage: "terminal") { model.projectLogs() }
+                    Button("Adopt Installed App") { model.projectAdoptInstalled() }
+                    Button("Install APKs", systemImage: "arrow.down.app") { model.projectInstall() }
+                    Button("Launch Project App", systemImage: "play.fill") { model.projectLaunch() }.disabled(!model.projectInstalled)
+                    Button("Save Screenshot", systemImage: "camera") { model.projectScreenshot() }
+                    Button("Save App Logcat", systemImage: "terminal") { model.projectLogs() }
                 }.disabled(model.busy || !model.projectSessionSelected)
                 HStack {
-                    Button("Zurück") { model.projectNavigate(4) }
+                    Button("Back") { model.projectNavigate(4) }
                     Button("Home") { model.projectNavigate(3) }
-                    Button("Letzte Apps") { model.projectNavigate(187) }
+                    Button("Recent Apps") { model.projectNavigate(187) }
                     Spacer()
-                    Button("Sitzung beenden") { model.finishSession() }.disabled(model.busy)
+                    Button("End Session") { model.finishSession() }.disabled(model.busy)
                 }.disabled(model.busy || !model.projectSessionSelected)
                 // Ending a disconnected session must remain possible.
-                if !model.projectSessionSelected { Button("Getrennte Sitzung beenden") { model.finishSession() }.disabled(model.busy) }
+                if !model.projectSessionSelected { Button("End Disconnected Session") { model.finishSession() }.disabled(model.busy) }
             } else {
                 HStack {
-                    Text("Eine Sitzung bindet alle folgenden Aktionen an dieses Gerät und dessen aktuellen Android-Start.").font(.caption).foregroundStyle(.secondary)
+                    Text("A session binds all following actions to this device and its current Android boot.").font(.caption).foregroundStyle(.secondary)
                     Spacer()
-                    Button("Testsitzung beginnen", systemImage: "record.circle") { model.beginSession() }.buttonStyle(.borderedProminent)
+                    Button("Start Test Session", systemImage: "record.circle") { model.beginSession() }.buttonStyle(.borderedProminent)
                         .disabled(!model.connected || model.busy)
                 }
             }
-            Text("Aktionen in diesem Bereich werden automatisch gespeichert. Installation verändert das Zielgerät. Screenshots zeigen den gesamten Gerätebildschirm; App-Logcat erfasst den aktuellen Hauptprozess.").font(.caption).foregroundStyle(.secondary)
+            Text("Actions in this area are saved automatically. Installing changes the target device. Screenshots show the whole device screen; App Logcat captures the current main process.").font(.caption).foregroundStyle(.secondary)
         }.padding(20).projectCard()
     }
     private var notes: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("3 · Beobachtungen festhalten").font(.headline)
+            Text("3 · Record Observations").font(.headline)
             TextEditor(text: $model.projectNote).font(.body).frame(height: 80).scrollContentBackground(.hidden)
                 .padding(8).background(.black.opacity(0.15), in: RoundedRectangle(cornerRadius: 8)).disabled(model.busy)
-                .accessibilityLabel("Projektnotiz")
+                .accessibilityLabel("Project note")
             HStack {
-                Text(model.activeSessionID == nil ? "Die Notiz wird projektweit gespeichert." : "Die Notiz gehört zur aktiven Testsitzung.").font(.caption).foregroundStyle(.secondary)
+                (model.activeSessionID == nil ? Text("The note is saved for the whole project.") : Text("The note belongs to the active test session.")).font(.caption).foregroundStyle(.secondary)
                 Spacer()
-                Button("Notiz speichern") { model.saveProjectNote() }.disabled(model.busy || model.projectNote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                Button("Save Note") { model.saveProjectNote() }.disabled(model.busy || model.projectNote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }.padding(20).projectCard()
     }
     private func history(_ project: AnalysisProject) -> some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Gespeicherte Befunde und Aktionen").font(.headline)
-            Text("Statische Befunde und Laufzeitbeobachtungen bleiben getrennt. Jede Datei besitzt einen eigenen Hash und Zeitstempel.").font(.caption).foregroundStyle(.secondary)
+            Text("Saved Findings and Actions").font(.headline)
+            Text("Static findings and runtime observations stay separate. Every file has its own hash and timestamp.").font(.caption).foregroundStyle(.secondary)
             LazyVStack(alignment: .leading, spacing: 0) {
                 ForEach(project.evidence.reversed()) { item in
                     HStack(alignment: .top, spacing: 12) {
@@ -181,11 +181,11 @@ struct AnalysisProjectView: View {
                             Text(item.summary).font(.caption).foregroundStyle(.secondary).lineLimit(2)
                             Text(item.timestamp, format: .dateTime.day().month().hour().minute().second()).font(.caption2).foregroundStyle(.secondary)
                             if let id = item.sessionID, let session = project.sessions.first(where: { $0.id == id }) {
-                                Text("\(session.device.serial) · Sitzung \(id.uuidString.prefix(8))").font(.caption2).foregroundStyle(.secondary)
+                                Text("\(session.device.serial) · Session \(String(id.uuidString.prefix(8)))").font(.caption2).foregroundStyle(.secondary)
                             }
                         }
                         Spacer()
-                        Button("Ansehen") { model.showEvidence(item) }.disabled(model.busy)
+                        Button("View") { model.showEvidence(item) }.disabled(model.busy)
                     }.padding(.vertical, 12)
                     Divider()
                 }

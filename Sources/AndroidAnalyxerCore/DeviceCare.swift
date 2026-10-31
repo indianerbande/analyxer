@@ -23,7 +23,7 @@ public struct InstalledApp: Identifiable, Hashable, Sendable {
     public var source: String {
         switch installer {
         case "com.android.vending": return "Play Store"
-        case nil: return isSystem ? "Vorinstalliert" : "Sideload"
+        case nil: return isSystem ? String(localized: "Preinstalled") : String(localized: "Sideloaded")
         case let other?: return other == "com.android.shell" || other == "adb" ? "ADB" : other
         }
     }
@@ -99,26 +99,26 @@ public struct DeviceCareService: Sendable {
     public func setEnabled(_ enabled: Bool, package: String, serial: String) async throws {
         try await requireChangeable(package, serial: serial)
         let output = try await shell(serial, enabled ? ["pm", "enable", "--user", "0", package] : ["pm", "disable-user", "--user", "0", package]).text
-        guard output.contains("new state: " + (enabled ? "enabled" : "disabled-user")) else { throw AndroidAnalyxerError.failed("Android meldet: \(output.prefix(500))") }
+        guard output.contains("new state: " + (enabled ? "enabled" : "disabled-user")) else { throw AndroidAnalyxerError.failed(String(localized: "Android reports: \(String(output.prefix(500)))")) }
     }
 
     /// System apps only; data stays on the device so `restoreForUser` brings the app back unchanged.
     public func removeForUser(package: String, serial: String) async throws {
         let app = try await requireChangeable(package, serial: serial)
-        guard app.isSystem else { throw AndroidAnalyxerError.invalidInput("\(package) ist keine vorinstallierte App. Selbst installierte Apps werden deinstalliert, nicht für den Benutzer entfernt.") }
+        guard app.isSystem else { throw AndroidAnalyxerError.invalidInput(String(localized: "\(package) is not a preinstalled app. Apps you installed are uninstalled, not removed for the user.")) }
         try Self.requireSuccess(try await shell(serial, ["pm", "uninstall", "-k", "--user", "0", package]).text)
     }
 
     public func restoreForUser(package: String, serial: String) async throws {
         try Self.validate(package)
         let output = try await shell(serial, ["cmd", "package", "install-existing", "--user", "0", package]).text
-        guard output.contains("installed for user") else { throw AndroidAnalyxerError.failed("Android meldet: \(output.prefix(500))") }
+        guard output.contains("installed for user") else { throw AndroidAnalyxerError.failed(String(localized: "Android reports: \(String(output.prefix(500)))")) }
     }
 
     /// Removes an app the user installed, including its data. Not for preinstalled apps.
     public func uninstall(package: String, serial: String) async throws {
         let app = try await requireChangeable(package, serial: serial)
-        guard !app.isSystem else { throw AndroidAnalyxerError.invalidInput("\(package) ist vorinstalliert und kann nur deaktiviert oder für den Benutzer entfernt werden.") }
+        guard !app.isSystem else { throw AndroidAnalyxerError.invalidInput(String(localized: "\(package) is preinstalled and can only be disabled or removed for the user.")) }
         try Self.requireSuccess(try await shell(serial, ["pm", "uninstall", package]).text)
     }
 
@@ -130,9 +130,9 @@ public struct DeviceCareService: Sendable {
     /// Deletes one leftover folder after re-checking that its package is still unknown on the device.
     public func delete(_ leftover: AppLeftover, serial: String) async throws {
         try Self.validate(leftover.package)
-        guard Self.leftoverAreas.contains(leftover.area) else { throw AndroidAnalyxerError.invalidInput("Unbekannter Bereich \(leftover.area).") }
+        guard Self.leftoverAreas.contains(leftover.area) else { throw AndroidAnalyxerError.invalidInput(String(localized: "Unknown area \(leftover.area).")) }
         guard !Self.parseNames(try await shell(serial, ["pm", "list", "packages", "-u"]).text).contains(leftover.package) else {
-            throw AndroidAnalyxerError.invalidInput("\(leftover.package) ist inzwischen wieder installiert; der Ordner bleibt erhalten.")
+            throw AndroidAnalyxerError.invalidInput(String(localized: "\(leftover.package) has been installed again in the meantime; the folder is kept."))
         }
         _ = try await shell(serial, ["rm", "-rf", "--", leftover.path])
     }
@@ -147,9 +147,9 @@ public struct DeviceCareService: Sendable {
     private func requireChangeable(_ package: String, serial: String) async throws -> InstalledApp {
         try Self.validate(package)
         let entry = Self.parsePackageList(try await shell(serial, ["pm", "list", "packages", "-f", "-i", "-U", "-u"]).text).first { $0.package == package }
-        guard let entry else { throw AndroidAnalyxerError.invalidInput("\(package) ist auf dem Gerät nicht vorhanden.") }
+        guard let entry else { throw AndroidAnalyxerError.invalidInput(String(localized: "\(package) is not on the device.")) }
         guard !Self.isProtected(package, path: entry.path, dynamic: try await dynamicallyProtected(serial: serial)) else {
-            throw AndroidAnalyxerError.invalidInput("\(package) ist eine geschützte Systemkomponente und wird nicht verändert.")
+            throw AndroidAnalyxerError.invalidInput(String(localized: "\(package) is a protected system component and is not changed."))
         }
         let system = Self.parseNames(try await shell(serial, ["pm", "list", "packages", "-s"]).text).contains(package)
         return InstalledApp(package: package, path: entry.path, installer: entry.installer, isSystem: system, isDisabled: false, isRemovedForUser: false,
@@ -181,11 +181,11 @@ public struct DeviceCareService: Sendable {
     // MARK: Parsing
 
     static func validate(_ package: String) throws {
-        guard package.range(of: packagePattern, options: .regularExpression) != nil else { throw AndroidAnalyxerError.invalidInput("Ungültiger Paketname.") }
+        guard package.range(of: packagePattern, options: .regularExpression) != nil else { throw AndroidAnalyxerError.invalidInput(String(localized: "Invalid package name.")) }
     }
 
     static func requireSuccess(_ output: String) throws {
-        guard output.contains("Success") else { throw AndroidAnalyxerError.failed("Android meldet: \(output.trimmingCharacters(in: .whitespacesAndNewlines).prefix(500))") }
+        guard output.contains("Success") else { throw AndroidAnalyxerError.failed(String(localized: "Android reports: \(String(output.trimmingCharacters(in: .whitespacesAndNewlines).prefix(500)))")) }
     }
 
     static func isProtected(_ package: String, path: String?, dynamic: Set<String>) -> Bool {

@@ -19,7 +19,7 @@ struct EvidencePreviewView: View {
                     Text(preview.item.timestamp, format: .dateTime.day().month().year().hour().minute().second()).font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
-                Button("Schließen") { dismiss() }.keyboardShortcut(.cancelAction)
+                Button("Close") { dismiss() }.keyboardShortcut(.cancelAction)
             }
             Text(preview.item.summary).font(.callout).textSelection(.enabled)
             Text("SHA-256: " + preview.item.sha256).font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary).textSelection(.enabled)
@@ -27,14 +27,14 @@ struct EvidencePreviewView: View {
             if preview.item.kind == .screenshot, let image = NSImage(data: preview.data) {
                 Image(nsImage: image).resizable().scaledToFit().frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if preview.item.kind == .networkCapture {
-                Text("PCAP-Netzwerkaufzeichnung · \(preview.data.count) Bytes\nDer zugehörige Netzwerkbericht beschreibt Umfang und Grenzen. Die Originaldatei ist im Gesamtexport enthalten und lässt sich mit Wireshark öffnen.").textSelection(.enabled)
+                Text("PCAP network capture · \(preview.data.count) bytes\nThe accompanying network report describes scope and limits. The original file is included in the full export and can be opened with Wireshark.").textSelection(.enabled)
                 Spacer()
             } else {
                 let text = [EvidenceKind.rea, .instrumentation].contains(preview.item.kind) ? REAPresentation.text(preview.data) : String(decoding: preview.data, as: UTF8.self)
                 if text.utf8.count > EvidenceTextView.limit {
-                    Text("Vorschau auf die ersten \(EvidenceTextView.limit / 1_000_000) MB begrenzt. Die vollständige Datei liegt im Projekt und im Gesamtexport.").font(.caption).foregroundStyle(.orange)
+                    Text("Preview limited to the first \(EvidenceTextView.limit / 1_000_000) MB. The complete file is in the project and in the full export.").font(.caption).foregroundStyle(.orange)
                 }
-                Text("⌘F sucht im Text.").font(.caption).foregroundStyle(.secondary)
+                Text("⌘F searches the text.").font(.caption).foregroundStyle(.secondary)
                 EvidenceTextView(text: text)
             }
         }.padding(24).frame(minWidth: 800, idealWidth: 940, minHeight: 600, idealHeight: 720)

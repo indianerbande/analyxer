@@ -48,7 +48,7 @@ public struct EmulatorService: Sendable {
     /// to the existing AVD. Snapshots and emulator metrics are disabled.
     public func start(avd: AVD, persistent: Bool = false) async throws {
         guard !avd.name.isEmpty, !avd.name.contains(where: { $0.isNewline || $0 == "\0" }) else {
-            throw AndroidAnalyxerError.invalidInput("Ungültiger AVD-Name.")
+            throw AndroidAnalyxerError.invalidInput(String(localized: "Invalid AVD name."))
         }
         guard let emulator = paths.emulator else { throw AndroidAnalyxerError.missingTool("emulator") }
         try await runner.launch(Command(executable: emulator, arguments: ["-avd", avd.name] + (persistent ? [] : ["-read-only"]) + ["-no-snapshot", "-no-metrics"], environment: avd.home.map { ["ANDROID_AVD_HOME": $0.path] } ?? [:]))
@@ -56,16 +56,16 @@ public struct EmulatorService: Sendable {
 
     /// Keep Android's key-based IME available alongside the Mac keyboard.
     public func enableScreenKeyboard(serial: String) async throws {
-        guard isEmulator(serial) else { throw AndroidAnalyxerError.invalidInput("Tastatureinrichtung ist nur für einen Emulator vorgesehen.") }
+        guard isEmulator(serial) else { throw AndroidAnalyxerError.invalidInput(String(localized: "Keyboard setup is only intended for an emulator.")) }
         for (key, value) in [("show_ime_with_hard_keyboard", "1"), ("stylus_handwriting_enabled", "0")] {
             _ = try await adb(serial: serial, arguments: ["shell", "settings", "put", "secure", key, value])
             let result = try await adb(serial: serial, arguments: ["shell", "settings", "get", "secure", key])
-            guard result.text.trimmingCharacters(in: .whitespacesAndNewlines) == value else { throw AndroidAnalyxerError.failed("Android konnte die Tastatureinstellung nicht übernehmen: \(key)") }
+            guard result.text.trimmingCharacters(in: .whitespacesAndNewlines) == value else { throw AndroidAnalyxerError.failed(String(localized: "Android could not apply the keyboard setting: \(key)")) }
         }
     }
 
     public func stop(serial: String) async throws {
-        guard isEmulator(serial) else { throw AndroidAnalyxerError.invalidInput("Nur ein ausgewählter Android-Emulator kann beendet werden.") }
+        guard isEmulator(serial) else { throw AndroidAnalyxerError.invalidInput(String(localized: "Only a selected Android emulator can be shut down.")) }
         _ = try await adb(serial: serial, arguments: ["emu", "kill"])
     }
 
@@ -83,26 +83,26 @@ public struct EmulatorService: Sendable {
 
     public func logs(serial: String) async throws -> String {
         let result = try await adb(serial: serial, arguments: ["logcat", "-d", "-t", "1500", "-v", "threadtime"])
-        return result.text + (result.truncated ? "\n[Ausgabe auf 4 MiB begrenzt]" : "")
+        return result.text + (result.truncated ? "\n" + String(localized: "[Output limited to 4 MiB]") : "")
     }
 
     public func screenshot(serial: String) async throws -> Data {
         let result = try await adb(serial: serial, arguments: ["exec-out", "screencap", "-p"], outputLimit: 32 * 1024 * 1024)
         guard !result.truncated else { throw AndroidAnalyxerError.outputTooLarge }
         guard result.stdout.starts(with: [137, 80, 78, 71, 13, 10, 26, 10]) else {
-            throw AndroidAnalyxerError.failed("Der Emulator hat kein gültiges PNG-Bild geliefert.")
+            throw AndroidAnalyxerError.failed(String(localized: "The emulator did not deliver a valid PNG image."))
         }
         return result.stdout
     }
 
     public func keyevent(serial: String, keyCode: Int) async throws {
-        guard [3, 4, 187].contains(keyCode) else { throw AndroidAnalyxerError.invalidInput("Diese Navigationstaste wird nicht unterstützt.") }
+        guard [3, 4, 187].contains(keyCode) else { throw AndroidAnalyxerError.invalidInput(String(localized: "This navigation key is not supported.")) }
         _ = try await adb(serial: serial, arguments: ["shell", "input", "keyevent", String(keyCode)])
     }
 
     public func launchPackage(identifier: String, serial: String) async throws -> String {
         guard identifier.range(of: #"^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+$"#, options: .regularExpression) != nil else {
-            throw AndroidAnalyxerError.invalidInput("Ungültige Android-Paketkennung.")
+            throw AndroidAnalyxerError.invalidInput(String(localized: "Invalid Android package name."))
         }
         let resolution = try await adb(serial: serial, arguments: ["shell", "cmd", "package", "resolve-activity", "--brief", "-a", "android.intent.action.MAIN", "-c", "android.intent.category.LAUNCHER", identifier])
         try checkAndroidCommandResult(resolution)
@@ -110,7 +110,7 @@ public struct EmulatorService: Sendable {
               let component = resolution.text.split(whereSeparator: \.isNewline).last.map({ String($0).trimmingCharacters(in: .whitespacesAndNewlines) }),
               component.hasPrefix(identifier + "/"),
               component.range(of: #"^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)*/\.?[A-Za-z_$][A-Za-z0-9_.$]*$"#, options: .regularExpression) != nil else {
-            throw AndroidAnalyxerError.failed("Für \(identifier) wurde keine gültige startbare Activity gefunden.")
+            throw AndroidAnalyxerError.failed(String(localized: "No valid launchable activity was found for \(identifier)."))
         }
         // adb shell joins its arguments into a remote shell command. Quote the
         // validated component so legal Java inner-class names containing $ stay literal.
@@ -127,14 +127,14 @@ public struct EmulatorService: Sendable {
                 || text.hasPrefix("java.lang.") || text.hasPrefix("Security exception:")
                 || (text.hasPrefix("Status:") && text != "Status: ok")
         }
-        if failed { throw AndroidAnalyxerError.failed("Android konnte den App-Start nicht ausführen: \(output.prefix(4000))") }
+        if failed { throw AndroidAnalyxerError.failed(String(localized: "Android could not launch the app: \(String(output.prefix(4000)))")) }
     }
 
     public func inspectAPK(at apk: URL) async throws -> APKReport {
         try validateAPK(apk)
         let path = apk.standardizedFileURL.path
-        async let metadata = execute(tool: paths.aapt2, name: "aapt2 (Build-Tools)", arguments: ["dump", "badging", path])
-        async let permissions = execute(tool: paths.aapt2, name: "aapt2 (Build-Tools)", arguments: ["dump", "permissions", path])
+        async let metadata = execute(tool: paths.aapt2, name: "aapt2 (build-tools)", arguments: ["dump", "badging", path])
+        async let permissions = execute(tool: paths.aapt2, name: "aapt2 (build-tools)", arguments: ["dump", "permissions", path])
         let (metadataResult, permissionsResult) = try await (metadata, permissions)
         guard !metadataResult.truncated, !permissionsResult.truncated else { throw AndroidAnalyxerError.outputTooLarge }
         let permissionNames = permissionsResult.text.split(whereSeparator: \.isNewline).compactMap { line -> String? in
@@ -157,7 +157,7 @@ public struct EmulatorService: Sendable {
 
     func adb(serial: String, arguments: [String], timeout: TimeInterval = 30, outputLimit: Int = 4 * 1024 * 1024) async throws -> CommandResult {
         guard !serial.isEmpty, serial.range(of: #"^[A-Za-z0-9_.:\[\]-]+$"#, options: .regularExpression) != nil else {
-            throw AndroidAnalyxerError.invalidInput("Ungültige Gerätekennung.")
+            throw AndroidAnalyxerError.invalidInput(String(localized: "Invalid device serial."))
         }
         return try await execute(tool: paths.adb, name: "adb", arguments: ["-s", serial] + arguments, timeout: timeout, outputLimit: outputLimit)
     }
@@ -167,7 +167,7 @@ public struct EmulatorService: Sendable {
         let result = try await runner.run(Command(executable: tool, arguments: arguments, timeout: timeout, outputLimit: outputLimit))
         guard result.status == 0 else {
             let detail = String(decoding: result.stderr.isEmpty ? result.stdout : result.stderr, as: UTF8.self)
-            throw AndroidAnalyxerError.failed("\(name) fehlgeschlagen (Status \(result.status)): \(detail.prefix(4000))")
+            throw AndroidAnalyxerError.failed(String(localized: "\(name) failed (status \(Int(result.status))): \(String(detail.prefix(4000)))"))
         }
         return result
     }
@@ -178,7 +178,7 @@ public struct EmulatorService: Sendable {
     private func validateAPK(_ url: URL) throws {
         guard url.isFileURL, url.pathExtension.lowercased() == "apk",
               (try? url.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true else {
-            throw AndroidAnalyxerError.invalidInput("Bitte eine vorhandene APK-Datei auswählen.")
+            throw AndroidAnalyxerError.invalidInput(String(localized: "Choose an existing APK file."))
         }
     }
 }

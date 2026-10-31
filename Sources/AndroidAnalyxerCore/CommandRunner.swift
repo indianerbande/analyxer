@@ -67,7 +67,7 @@ public struct ProcessCommandRunner: CommandRunning {
         // A brief startup check catches immediate SDK/configuration failures.
         try? await Task.sleep(nanoseconds: 350_000_000)
         if !process.isRunning && process.terminationStatus != 0 {
-            throw AndroidAnalyxerError.failed("Emulator konnte nicht starten (Status \(process.terminationStatus)). Bitte AVD-Konfiguration und System-Image prüfen.")
+            throw AndroidAnalyxerError.failed(String(localized: "The emulator could not start (status \(Int(process.terminationStatus))). Check the AVD configuration and system image."))
         }
     }
 

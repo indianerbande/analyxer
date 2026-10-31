@@ -23,7 +23,7 @@ public struct InstrumentationRequest: Codable, Sendable {
     public func validate() throws {
         guard (1...8).contains(probes.count), (1000...60_000).contains(durationMilliseconds),
               (1...1000).contains(maxEvents), (32...16_384).contains(maxValueCharacters) else {
-            throw AndroidAnalyxerError.invalidInput("1–8 Messpunkte, 1–60 Sekunden, 1–1000 Aufrufe und 32–16384 Zeichen je Wert sind erlaubt.")
+            throw AndroidAnalyxerError.invalidInput(String(localized: "Allowed: 1–8 probes, 1–60 seconds, 1–1000 calls and 32–16384 characters per value."))
         }
         var seen = Set<String>()
         for probe in probes {
@@ -33,10 +33,10 @@ public struct InstrumentationRequest: Codable, Sendable {
                   probe.argumentTypes.count <= 16, probe.argumentTypes.allSatisfy({ type in
                       type.count <= 512 && type.range(of: #"^(?:\[*(?:[ZBCSIJFD]|L[A-Za-z_$][A-Za-z0-9_.$]*;)|[A-Za-z_$][A-Za-z0-9_.$]*(?:\[\])*)$"#, options: .regularExpression) != nil
                   }) else {
-                throw AndroidAnalyxerError.invalidInput("Messpunkte benötigen eine exakte Java-Klasse, Methode und Parameterliste.")
+                throw AndroidAnalyxerError.invalidInput(String(localized: "Probes need an exact Java class, method and parameter list."))
             }
             let key = probe.className + "#" + probe.methodName + "(" + probe.argumentTypes.joined(separator: ",") + ")"
-            guard seen.insert(key).inserted else { throw AndroidAnalyxerError.invalidInput("Doppelter Messpunkt: \(key)") }
+            guard seen.insert(key).inserted else { throw AndroidAnalyxerError.invalidInput(String(localized: "Duplicate probe: \(key)")) }
         }
     }
 }
@@ -81,14 +81,14 @@ public struct InstrumentationService: Sendable {
                         expectedBootID: String, request: InstrumentationRequest) async throws -> InstrumentationCapture {
         try request.validate()
         guard package.range(of: #"^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+$"#, options: .regularExpression) != nil else {
-            throw AndroidAnalyxerError.invalidInput("Ungültiges Android-Paket.")
+            throw AndroidAnalyxerError.invalidInput(String(localized: "Invalid Android package."))
         }
         guard try await service.bootIdentity(serial: serial) == expectedBootID else {
-            throw AndroidAnalyxerError.failed("Android-Bootidentität geändert. Eine neue Testsitzung beginnen.")
+            throw AndroidAnalyxerError.failed(String(localized: "Android boot identity changed. Start a new test session."))
         }
         let pidText = try await service.adb(serial: serial, arguments: ["shell", "pidof", package]).text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let pid = Int(pidText), pid > 0 else {
-            throw AndroidAnalyxerError.failed("Kein eindeutiger Hauptprozess für \(package). Projekt-App zuerst starten.")
+            throw AndroidAnalyxerError.failed(String(localized: "No unique main process for \(package). Start the project app first."))
         }
         let initialIdentity = try await processIdentity(service: service, serial: serial, package: package, pid: pid)
         let script = try Self.script(request: request, bridge: Self.readBridge(bridgeURL), package: package, pid: pid)
@@ -99,7 +99,7 @@ public struct InstrumentationService: Sendable {
         try script.write(to: scriptURL, atomically: true, encoding: .utf8)
         let portText = try await service.adb(serial: serial, arguments: ["forward", "tcp:0", "tcp:27042"]).text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let port = Int(portText), (1...65535).contains(port) else {
-            throw InstrumentationError(message: "ADB lieferte keinen eindeutigen lokalen Frida-Port.", script: Data(script.utf8))
+            throw InstrumentationError(message: String(localized: "ADB did not return a unique local Frida port."), script: Data(script.utf8))
         }
         var output: Data?
         let started = Date()
@@ -110,14 +110,14 @@ public struct InstrumentationService: Sendable {
                 timeout: Double(request.durationMilliseconds) / 1000 + 30, outputLimit: 24 * 1024 * 1024)
             let result = try await runner.run(command)
             output = result.stdout
-            guard !result.truncated else { throw InstrumentationError(message: "REA-Ausgabe überschreitet 24 MiB; Aufnahme ist unvollständig.", evidenceJSON: result.stdout, script: Data(script.utf8)) }
+            guard !result.truncated else { throw InstrumentationError(message: String(localized: "REA output exceeds 24 MiB; the recording is incomplete."), evidenceJSON: result.stdout, script: Data(script.utf8)) }
             guard result.status == 0 else {
-                throw InstrumentationError(message: "REA/Frida fehlgeschlagen: \(String(decoding: result.stderr.isEmpty ? result.stdout : result.stderr, as: UTF8.self).prefix(4000))", evidenceJSON: result.stdout, script: Data(script.utf8))
+                throw InstrumentationError(message: String(localized: "REA/Frida failed: \(String(String(decoding: result.stderr.isEmpty ? result.stdout : result.stderr, as: UTF8.self).prefix(4000)))"), evidenceJSON: result.stdout, script: Data(script.utf8))
             }
             let parsed = try Self.parseEvidence(result.stdout, expectedPID: pid, request: request)
             guard try await service.bootIdentity(serial: serial) == expectedBootID,
                   try await processIdentity(service: service, serial: serial, package: package, pid: pid) == initialIdentity else {
-                throw InstrumentationError(message: "Gerät oder Prozess hat sich während der Aufnahme geändert; Rohbefund bleibt verfügbar.", evidenceJSON: result.stdout, script: Data(script.utf8))
+                throw InstrumentationError(message: String(localized: "The device or process changed during the recording; the raw finding remains available."), evidenceJSON: result.stdout, script: Data(script.utf8))
             }
             try await removeForward(service: service, serial: serial, port: port)
             return InstrumentationCapture(evidenceJSON: result.stdout, script: Data(script.utf8), request: request,
@@ -127,7 +127,7 @@ public struct InstrumentationService: Sendable {
         } catch {
             var detail = error.localizedDescription
             do { try await removeForward(service: service, serial: serial, port: port) }
-            catch { detail += "\nADB-Portweiterleitung tcp:\(port) konnte nicht entfernt werden: \(error.localizedDescription)" }
+            catch { detail += "\n" + String(localized: "The ADB port forward tcp:\(port) could not be removed: \(error.localizedDescription)") }
             throw InstrumentationError(message: detail, evidenceJSON: output, script: Data(script.utf8))
         }
     }
@@ -139,26 +139,26 @@ public struct InstrumentationService: Sendable {
     private func processIdentity(service: EmulatorService, serial: String, package: String, pid: Int) async throws -> String {
         let command = try await service.adb(serial: serial, arguments: ["exec-out", "cat", "/proc/\(pid)/cmdline"])
         guard !command.truncated, command.stdout.split(separator: 0).first.map({ String(decoding: $0, as: UTF8.self) }) == package else {
-            throw AndroidAnalyxerError.failed("PID \(pid) gehört nicht zum gewählten App-Hauptprozess.")
+            throw AndroidAnalyxerError.failed(String(localized: "PID \(pid) does not belong to the selected app's main process."))
         }
         let stat = try await service.adb(serial: serial, arguments: ["exec-out", "cat", "/proc/\(pid)/stat"])
-        guard !stat.truncated, let close = stat.text.lastIndex(of: ")") else { throw AndroidAnalyxerError.failed("Prozessidentität nicht lesbar.") }
+        guard !stat.truncated, let close = stat.text.lastIndex(of: ")") else { throw AndroidAnalyxerError.failed(String(localized: "The process identity could not be read.")) }
         let fields = stat.text[stat.text.index(after: close)...].split(whereSeparator: \.isWhitespace)
-        guard fields.count > 19, UInt64(fields[19]) != nil else { throw AndroidAnalyxerError.failed("Prozess-Startzeit nicht lesbar.") }
+        guard fields.count > 19, UInt64(fields[19]) != nil else { throw AndroidAnalyxerError.failed(String(localized: "The process start time could not be read.")) }
         return String(fields[19])
     }
 
     private static func readBridge(_ url: URL) throws -> String {
         guard url.isFileURL, let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey]),
               values.isRegularFile == true, let size = values.fileSize, size > 0, size <= 8 * 1024 * 1024 else {
-            throw AndroidAnalyxerError.invalidInput("Eine vorhandene, gebündelte Frida-Java-Bridge (höchstens 8 MiB) auswählen.")
+            throw AndroidAnalyxerError.invalidInput(String(localized: "Choose an existing, bundled Frida Java bridge (at most 8 MiB)."))
         }
         return try String(contentsOf: url, encoding: .utf8)
     }
 
     public static func script(request: InstrumentationRequest, bridge: String, package: String, pid: Int) throws -> String {
         try request.validate()
-        guard pid > 0, !bridge.isEmpty else { throw AndroidAnalyxerError.invalidInput("PID und Java-Bridge fehlen.") }
+        guard pid > 0, !bridge.isEmpty else { throw AndroidAnalyxerError.invalidInput(String(localized: "PID and Java bridge are missing.")) }
         let config = String(decoding: try JSONEncoder().encode(request), as: UTF8.self)
         let expectedPackage = String(decoding: try JSONEncoder().encode(package), as: UTF8.self)
         return bridge + "\n;\n" + #"""
@@ -233,7 +233,7 @@ public struct InstrumentationService: Sendable {
               result["pid"] as? Int == expectedPID,
               result["mode"] as? String == "attach",
               let messages = result["messages"] as? [[String: Any]] else {
-            throw InstrumentationError(message: "REA lieferte keinen gültigen Instrumentierungsbefund für diese PID.", evidenceJSON: data)
+            throw InstrumentationError(message: String(localized: "REA did not return a valid instrumentation finding for this PID."), evidenceJSON: data)
         }
         let events = messages.compactMap { $0["payload"] as? [String: Any] }.filter { $0["schema"] as? String == "android-analyxer.java-probe.v1" }
         let installed = Set(events.filter { $0["kind"] as? String == "installed" }.compactMap { $0["probe"] as? Int })
@@ -241,16 +241,16 @@ public struct InstrumentationService: Sendable {
         let errors = events.filter { $0["kind"] as? String == "setup-error" }.compactMap { $0["message"] as? String }
             + messages.filter { $0["type"] as? String == "error" }.compactMap { $0["description"] as? String }
         guard errors.isEmpty, installed == Set(request.probes.indices) else {
-            throw InstrumentationError(message: "Messpunkte nicht vollständig eingerichtet: \(errors.joined(separator: "; ")) (\(installed.count)/\(request.probes.count)).", evidenceJSON: data)
+            throw InstrumentationError(message: String(localized: "Probes not fully set up: \(errors.joined(separator: "; ")) (\(installed.count)/\(request.probes.count))."), evidenceJSON: data)
         }
-        var warnings = ["Nur ausgewählte Java-Überladungen; keine automatische Vollerfassung des Datenverkehrs. Objekte bleiben opak, Strings und Bytearrays sind begrenzt."]
-        if invocations == 0 { warnings.append("Messpunkte eingerichtet, aber im Aufnahmefenster kein Aufruf beobachtet.") }
-        if events.contains(where: { $0["kind"] as? String == "limit" }) { warnings.append("Maximale Anzahl beobachteter Aufrufe erreicht; spätere Aufrufe fehlen.") }
-        if result["messages_truncated"] as? Bool == true { warnings.append("REA hat die Nachrichtenhistorie gekürzt.") }
+        var warnings = ["Selected Java overloads only; no automatic full capture of traffic. Objects stay opaque, strings and byte arrays are limited."]
+        if invocations == 0 { warnings.append("Probes set up, but no call observed in the recording window.") }
+        if events.contains(where: { $0["kind"] as? String == "limit" }) { warnings.append("Maximum number of observed calls reached; later calls are missing.") }
+        if result["messages_truncated"] as? Bool == true { warnings.append("REA truncated the message history.") }
         if let cleanup = root["cleanup_error"] ?? result["cleanup_error"], !(cleanup is NSNull) {
-            throw InstrumentationError(message: "Frida konnte nicht sauber beendet werden: \(String(describing: cleanup))", evidenceJSON: data)
+            throw InstrumentationError(message: String(localized: "Frida could not be shut down cleanly: \(String(describing: cleanup))"), evidenceJSON: data)
         }
-        let summary = "In-Prozess-Aufnahme · PID \(expectedPID) · \(installed.count) Messpunkte · \(invocations) Aufrufe"
+        let summary = "In-process recording · PID \(expectedPID) · \(installed.count) probes · \(invocations) calls"
         return (installed.count, invocations, warnings, summary)
     }
 }

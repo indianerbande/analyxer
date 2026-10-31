@@ -263,7 +263,7 @@ final class PlayWorkflowTests: XCTestCase {
         try device("Bare", target: "android-99", config: nil)
         let summary = { (name: String) in AVDSystemInfo.read(name: name, catalogue: catalogue)?.summary }
         XCTAssertEqual(summary("Play"), "Android 16 · API 36.1 · Google Play · ARM64")
-        XCTAssertEqual(summary("Preview"), "Android 17 · API 37.2 · Google Play · 16-KB-Seiten · ARM64")
+        XCTAssertEqual(summary("Preview"), "Android 17 · API 37.2 · Google Play · 16 KB pages · ARM64")
         XCTAssertEqual(summary("Apis"), "Android 14 · API 34 · Google APIs · x86_64")
         XCTAssertEqual(summary("Bare"), "API 99")
         XCTAssertNil(summary("Missing"))

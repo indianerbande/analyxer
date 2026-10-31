@@ -119,8 +119,8 @@ final class DeepAnalysisWorkflowTests: XCTestCase {
         XCTAssertEqual(captured, pcap)
         XCTAssertEqual(capture.sessionID, session.id)
         XCTAssertEqual(report.sessionID, session.id)
-        XCTAssertTrue(text.contains("Herkunft") || text.contains("nicht verifiziert"))
-        XCTAssertTrue(text.contains("Aufnahmegerät, Aufnahmezeit und App-Zuordnung nicht verifiziert"))
+        XCTAssertTrue(text.contains("not verified"))
+        XCTAssertTrue(text.contains("capture device, capture time and app attribution not verified"))
         XCTAssertTrue(text.contains(capture.sha256))
         try await store.endSession(session.id)
         do { try await flow.importTraffic(sessionID: session.id, file: input); XCTFail("Closed session accepted import") } catch {}

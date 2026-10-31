@@ -13,17 +13,17 @@ final class AppProfileTests: XCTestCase {
 
     func testPermissionsGetPlainLanguageGroupsAndLevels() {
         let describe = { (name: String) in PermissionCatalog.describe(name, ownPackage: "com.example.game") }
-        XCTAssertEqual(describe("android.permission.CAMERA").label, "Kamera")
+        XCTAssertEqual(describe("android.permission.CAMERA").label, "Camera")
         XCTAssertEqual(describe("android.permission.CAMERA").level, .dangerous)
         XCTAssertEqual(describe("android.permission.SYSTEM_ALERT_WINDOW").level, .special)
         XCTAssertEqual(describe("android.permission.MOUNT_UNMOUNT_FILESYSTEMS").level, .systemOnly)
-        XCTAssertEqual(describe("com.google.android.gms.permission.AD_ID").group, "Werbung & Tracking")
-        XCTAssertEqual(describe("android.permission.FOREGROUND_SERVICE_DATA_SYNC").label, "Hintergrunddienst: data sync")
+        XCTAssertEqual(describe("com.google.android.gms.permission.AD_ID").group, "Advertising & Tracking")
+        XCTAssertEqual(describe("android.permission.FOREGROUND_SERVICE_DATA_SYNC").label, "Background service: data sync")
         XCTAssertEqual(describe("com.example.game.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION").level, .appSpecific)
-        XCTAssertEqual(describe("com.huawei.appmarket.service.commondata.permission.GET_COMMON_DATA").label, "Huawei: App-Store-Daten")
-        XCTAssertEqual(describe("com.sec.android.provider.badge.permission.READ").label, "Samsung: App-Symbol-Zähler")
+        XCTAssertEqual(describe("com.huawei.appmarket.service.commondata.permission.GET_COMMON_DATA").label, "Huawei: App store data")
+        XCTAssertEqual(describe("com.sec.android.provider.badge.permission.READ").label, "Samsung: App icon badge")
         let unknown = describe("android.permission.BIND_APPHUB_SERVICE")
-        XCTAssertEqual(unknown.group, "Sonstiges"); XCTAssertEqual(unknown.level, .unknown)
+        XCTAssertEqual(unknown.group, "Other"); XCTAssertEqual(unknown.level, .unknown)
         XCTAssertEqual(describe("org.example.CUSTOM").level, .unknown)
     }
 
@@ -34,14 +34,14 @@ final class AppProfileTests: XCTestCase {
             libraries: ["libapplovin-native-crash-reporter.so", "libcrashlytics.so", "libemulator_check.so", "libunity.so"],
             markers: ["firebase-analytics", "play-services-ads-identifier", "billing"])
         let byName = Dictionary(uniqueKeysWithValues: sdks.map { ($0.name, $0) })
-        XCTAssertEqual(byName["AppLovin"]?.sources, ["Java-Code", "native Bibliothek"])
-        XCTAssertEqual(byName["Meta Audience Network"]?.category, "Werbung")
-        XCTAssertNil(byName["Facebook-SDK (Login, Teilen, App Events)"], "com.facebook.ads alone is not the Facebook SDK")
+        XCTAssertEqual(byName["AppLovin"]?.sources, ["Java code", "native library"])
+        XCTAssertEqual(byName["Meta Audience Network"]?.category, "Advertising")
+        XCTAssertNil(byName["Facebook SDK (Login, Sharing, App Events)"], "com.facebook.ads alone is not the Facebook SDK")
         XCTAssertNotNil(byName["Google AdMob"])
         XCTAssertNil(byName["Adjust"], "com.adjustable must not match com.adjust.sdk")
-        XCTAssertEqual(byName["Firebase Crashlytics"]?.sources, ["native Bibliothek"])
-        XCTAssertNotNil(byName["Emulator-Erkennung"])
-        XCTAssertEqual(byName["Google Analytics for Firebase"]?.sources, ["Bibliothekskennung"])
+        XCTAssertEqual(byName["Firebase Crashlytics"]?.sources, ["native library"])
+        XCTAssertNotNil(byName["Emulator Detection"])
+        XCTAssertEqual(byName["Google Analytics for Firebase"]?.sources, ["library marker"])
         XCTAssertNotNil(byName["Google Play Billing"])
         XCTAssertNil(byName["Unity Ads"], "the Unity player is the engine, not Unity Ads")
 
@@ -71,13 +71,13 @@ final class AppProfileTests: XCTestCase {
         XCTAssertEqual(profile.frameworks, ["Unity (IL2CPP)"]); XCTAssertEqual(profile.abis, ["arm64-v8a"]); XCTAssertEqual(profile.nativeLibraryCount, 2)
         XCTAssertEqual(Set(profile.sdks.map(\.name)), ["Google AdMob", "Google Play Billing", "AppsFlyer"])
         XCTAssertEqual(profile.trackingSDKs.count, 2)
-        XCTAssertEqual(profile.reachable, [ReachableEntry(kind: "Bildschirme", count: 1), ReachableEntry(kind: "Empfänger", count: 1)])
-        XCTAssertEqual(profile.reachable.map(\.title), ["1 Bildschirm", "1 Empfänger"])
+        XCTAssertEqual(profile.reachable, [ReachableEntry(kind: "screens", count: 1), ReachableEntry(kind: "receivers", count: 1)])
+        XCTAssertEqual(profile.reachable.map(\.title), ["1 screen", "1 receiver"])
         XCTAssertEqual(profile.webLinkHosts, ["play.example.com"]); XCTAssertEqual(profile.linkSchemes, ["examplegame://"])
         XCTAssertTrue(profile.cleartextTraffic); XCTAssertFalse(profile.allowBackup); XCTAssertFalse(profile.debuggable)
-        XCTAssertEqual(profile.permissionsByGroup.first?.group, "Kamera & Mikrofon")
+        XCTAssertEqual(profile.permissionsByGroup.first?.group, "Camera & Microphone")
         let highlights = profile.highlights.map(\.text)
-        XCTAssertEqual(highlights, ["2 Werbe- und Tracking-Bibliotheken", "Liest die Werbe-ID", "1 Berechtigung mit Freigabe", "Über anderen Apps einblenden",
-                                    "Startet beim Hochfahren", "Erlaubt unverschlüsseltes HTTP"])
+        XCTAssertEqual(highlights, ["2 advertising and tracking libraries", "Reads the advertising ID", "1 permission needing approval", "Display over other apps",
+                                    "Starts at boot", "Allows unencrypted HTTP"])
     }
 }

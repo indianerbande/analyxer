@@ -34,7 +34,7 @@ struct AppProfileView: View {
                     }
                 }
             } else if model.profileLoading {
-                HStack(spacing: 10) { ProgressView().controlSize(.small); Text("Steckbrief wird erstellt …").foregroundStyle(.secondary) }.padding(.horizontal, 4)
+                HStack(spacing: 10) { ProgressView().controlSize(.small); Text("Creating app profile …").foregroundStyle(.secondary) }.padding(.horizontal, 4)
             }
         }
     }
@@ -46,28 +46,28 @@ struct AppProfileView: View {
                 Image(systemName: "shippingbox.fill").font(.largeTitle).foregroundStyle(accent)
                 VStack(alignment: .leading, spacing: 5) {
                     Text(project.title).font(.title2.weight(.semibold))
-                    Text("\(project.packageName) · Version \(manifest.versionName ?? "unbekannt")").font(.system(.callout, design: .monospaced)).textSelection(.enabled)
+                    Text("\(project.packageName) · Version \(manifest.versionName ?? String(localized: "unknown"))").font(.system(.callout, design: .monospaced)).textSelection(.enabled)
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 4) {
-                    Label("Gespeichert", systemImage: "checkmark.circle.fill").foregroundStyle(accent)
+                    Label("Saved", systemImage: "checkmark.circle.fill").foregroundStyle(accent)
                     Text(project.updatedAt, format: .dateTime.day().month().year().hour().minute()).font(.caption).foregroundStyle(.secondary)
                 }
             }
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 190), spacing: 10, alignment: .leading)], alignment: .leading, spacing: 10) {
                 fact("Android", value: android(min: manifest.minSDK, target: manifest.targetSDK), icon: "iphone.gen3")
-                fact("Umfang", value: profile.map { "\($0.apkCount) APK\($0.apkCount == 1 ? "" : "s") · \(AnalyxerModel.bytes($0.totalBytes))" } ?? "\(project.apkFiles.count) APKs", icon: "shippingbox")
-                fact("Technik", value: profile.map { $0.frameworks.isEmpty ? "Java/Kotlin" : $0.frameworks.joined(separator: ", ") } ?? "…", icon: "cpu")
-                fact("Architektur", value: profile.map { $0.abis.isEmpty ? "ohne nativen Code" : $0.abis.joined(separator: ", ") } ?? "…", icon: "memorychip")
-                fact("Herkunft", value: project.installedSource.map { "vom Gerät \($0.serial)" } ?? "APK-Datei \(project.originalAPKName)", icon: "arrow.down.circle")
+                fact(String(localized: "Contents"), value: profile.map { "\($0.apkCount) APK\($0.apkCount == 1 ? "" : "s") · \(AnalyxerModel.bytes($0.totalBytes))" } ?? "\(project.apkFiles.count) APKs", icon: "shippingbox")
+                fact(String(localized: "Technology"), value: profile.map { $0.frameworks.isEmpty ? "Java/Kotlin" : $0.frameworks.joined(separator: ", ") } ?? "…", icon: "cpu")
+                fact(String(localized: "Architecture"), value: profile.map { $0.abis.isEmpty ? String(localized: "no native code") : $0.abis.joined(separator: ", ") } ?? "…", icon: "memorychip")
+                fact(String(localized: "Origin"), value: project.installedSource.map { String(localized: "from device \($0.serial)") } ?? String(localized: "APK file \(project.originalAPKName)"), icon: "arrow.down.circle")
             }
         }.padding(22).frame(maxWidth: .infinity, alignment: .leading).card()
     }
 
     private func android(min: String?, target: String?) -> String {
-        let minimum = AppProfile.android(min).map { "ab \($0)" } ?? min.map { "ab API \($0)" } ?? "unbekannt"
-        let targeted = AppProfile.android(target).map { " · für \($0)" } ?? ""
-        return minimum + targeted
+        let minimum = AppProfile.android(min).map { String(localized: "\($0) or later") } ?? min.map { String(localized: "API \($0) or later") } ?? String(localized: "unknown")
+        let targeted = AppProfile.android(target).map { String(localized: "targets \($0)") }
+        return [minimum, targeted].compactMap { $0 }.joined(separator: " · ")
     }
 
     private func fact(_ title: String, value: String, icon: String) -> some View {
@@ -82,8 +82,8 @@ struct AppProfileView: View {
 
     private func highlights(_ profile: AppProfile) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Auf einen Blick").font(.headline)
-            if profile.highlights.isEmpty { Text("Nichts Auffälliges in Berechtigungen, Bibliotheken und Manifest.").foregroundStyle(.secondary) }
+            Text("At a Glance").font(.headline)
+            if profile.highlights.isEmpty { Text("Nothing notable in permissions, libraries and manifest.").foregroundStyle(.secondary) }
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 240), spacing: 8, alignment: .leading)], alignment: .leading, spacing: 8) {
                 ForEach(Array(profile.highlights.enumerated()), id: \.offset) { _, item in
                     Label(item.text, systemImage: item.notable ? "exclamationmark.circle.fill" : "info.circle")
@@ -99,8 +99,9 @@ struct AppProfileView: View {
         let dangerous = profile.permissions.filter { $0.level == .dangerous }.count, special = profile.permissions.filter { $0.level == .special }.count
         return VStack(alignment: .leading, spacing: 14) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Berechtigungen").font(.headline)
-                Text("\(profile.permissions.count) angefordert · \(dangerous) mit Freigabe · \(special) Sonderzugriff\(special == 1 ? "" : "e")").font(.caption).foregroundStyle(.secondary)
+                Text("Permissions").font(.headline)
+                (special == 1 ? Text("\(profile.permissions.count) requested · \(dangerous) needing approval · 1 special access")
+                     : Text("\(profile.permissions.count) requested · \(dangerous) needing approval · \(special) special access")).font(.caption).foregroundStyle(.secondary)
             }
             ForEach(profile.permissionsByGroup, id: \.group) { group, items in
                 VStack(alignment: .leading, spacing: 6) {
@@ -114,7 +115,7 @@ struct AppProfileView: View {
                     }
                 }
             }
-            Text("Freigabe nötig: Android fragt den Nutzer. Sonderzugriff: muss in den Einstellungen eigens erlaubt werden. Ohne Rückfrage: wird bei der Installation gewährt. Rohname per Mauszeiger.")
+            Text("Needs approval: Android asks the user. Special access: must be allowed separately in Settings. No prompt: granted on installation. Hover for the raw name.")
                 .font(.caption).foregroundStyle(.secondary)
         }.padding(20).frame(maxWidth: .infinity, alignment: .leading).card()
     }
@@ -122,10 +123,10 @@ struct AppProfileView: View {
     private func libraries(_ profile: AppProfile) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Enthaltene Bibliotheken").font(.headline)
-                Text("\(profile.sdks.count) erkannt · \(profile.trackingSDKs.count) für Werbung oder Tracking").font(.caption).foregroundStyle(.secondary)
+                Text("Included Libraries").font(.headline)
+                Text("\(profile.sdks.count) detected · \(profile.trackingSDKs.count) for advertising or tracking").font(.caption).foregroundStyle(.secondary)
             }
-            if profile.sdks.isEmpty { Text("Keine bekannten Bibliotheken erkannt.").foregroundStyle(.secondary) }
+            if profile.sdks.isEmpty { Text("No known libraries detected.").foregroundStyle(.secondary) }
             ForEach(profile.sdksByCategory, id: \.category) { category, items in
                 VStack(alignment: .leading, spacing: 6) {
                     Text(category).font(.subheadline.weight(.semibold))
@@ -140,25 +141,25 @@ struct AppProfileView: View {
                 }
             }
             if profile.frameworks.contains(where: { $0.hasPrefix("Unity (IL2CPP)") }) {
-                Text("Die Spiellogik liegt als nativer Code vor (IL2CPP). Erkannt werden die eingebundenen Bibliotheken, nicht das Verhalten des Spiels selbst.").font(.caption).foregroundStyle(.secondary)
+                Text("The game logic is native code (IL2CPP). What is detected are the bundled libraries, not the behaviour of the game itself.").font(.caption).foregroundStyle(.secondary)
             }
             if profile.dexInventoryTruncated {
-                Text("Das gespeicherte DEX-Inventar ist abgeschnitten; die Erkennung stützt sich vor allem auf Manifest, native Bibliotheken und Bibliothekskennungen.").font(.caption).foregroundStyle(.secondary)
+                Text("The stored DEX inventory is truncated; detection relies mainly on the manifest, native libraries and library markers.").font(.caption).foregroundStyle(.secondary)
             }
         }.padding(20).frame(maxWidth: .infinity, alignment: .leading).card()
     }
 
     private func reachability(_ profile: AppProfile) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Von außen erreichbar").font(.headline)
-            Text(profile.reachable.isEmpty ? "Keine Komponente für andere Apps freigegeben." : profile.reachable.map(\.title).joined(separator: " · ")).font(.callout)
+            Text("Reachable from Outside").font(.headline)
+            Text(profile.reachable.isEmpty ? String(localized: "No component is exposed to other apps.") : profile.reachable.map(\.title).joined(separator: " · ")).font(.callout)
             if !profile.webLinkHosts.isEmpty {
-                Label("Öffnet Weblinks: " + profile.webLinkHosts.joined(separator: ", "), systemImage: "link").font(.callout).textSelection(.enabled)
+                Label(String(localized: "Opens web links: \(profile.webLinkHosts.joined(separator: ", "))"), systemImage: "link").font(.callout).textSelection(.enabled)
             }
             if !profile.linkSchemes.isEmpty {
-                Label("Eigene Link-Schemata: " + profile.linkSchemes.joined(separator: ", "), systemImage: "arrow.up.right.square").font(.callout).textSelection(.enabled)
+                Label(String(localized: "Custom link schemes: \(profile.linkSchemes.joined(separator: ", "))"), systemImage: "arrow.up.right.square").font(.callout).textSelection(.enabled)
             }
-            Text("Andere Apps oder Links können diese Komponenten starten. Die Einzelheiten stehen unter Details & Belege.").font(.caption).foregroundStyle(.secondary)
+            Text("Other apps or links can start these components. The details are under Details & Evidence.").font(.caption).foregroundStyle(.secondary)
         }.padding(20).frame(maxWidth: .infinity, alignment: .leading).card()
     }
 
@@ -170,11 +171,12 @@ struct AppProfileView: View {
         }
     }
 
-    private static let groupIcon = [
-        "Standort": "location", "Kamera & Mikrofon": "camera", "Kontakte & Konten": "person.2", "Kalender": "calendar", "Telefon & Anrufe": "phone",
-        "SMS & MMS": "message", "Fotos, Medien & Dateien": "photo.on.rectangle", "Körper & Aktivität": "figure.walk",
-        "Geräte in der Nähe": "dot.radiowaves.left.and.right", "Werbung & Tracking": "eye", "Über anderen Apps & Systemzugriff": "rectangle.on.rectangle",
-        "Hintergrund & Autostart": "clock.arrow.circlepath", "Benachrichtigungen": "bell", "Netzwerk & Internet": "network", "Käufe & Lizenzen": "creditcard",
-        "Push-Nachrichten": "bell.badge", "Hardware & Sonstiges": "cpu", "Herstellerschnittstellen": "building.2", "App-intern": "lock.shield", "Sonstiges": "questionmark.circle",
-    ]
+    /// Keyed by the localized group names that `PermissionInfo.group` carries.
+    private static let groupIcon: [String: String] = Dictionary(uniqueKeysWithValues: [
+        ("Location", "location"), ("Camera & Microphone", "camera"), ("Contacts & Accounts", "person.2"), ("Calendar", "calendar"), ("Phone & Calls", "phone"),
+        ("SMS & MMS", "message"), ("Photos, Media & Files", "photo.on.rectangle"), ("Body & Activity", "figure.walk"),
+        ("Nearby Devices", "dot.radiowaves.left.and.right"), ("Advertising & Tracking", "eye"), ("Overlays & System Access", "rectangle.on.rectangle"),
+        ("Background & Autostart", "clock.arrow.circlepath"), ("Notifications", "bell"), ("Network & Internet", "network"), ("Purchases & Licences", "creditcard"),
+        ("Push Messages", "bell.badge"), ("Hardware & Other", "cpu"), ("Vendor Interfaces", "building.2"), ("App-Internal", "lock.shield"), ("Other", "questionmark.circle"),
+    ].map { (String(localized: String.LocalizationValue($0.0)), $0.1) })
 }

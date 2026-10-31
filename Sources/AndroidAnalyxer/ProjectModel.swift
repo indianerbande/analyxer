@@ -10,32 +10,32 @@ extension AnalyxerModel {
     func createProject(from source: URL) {
         guard !busy else { return }
         let panel = NSSavePanel()
-        panel.title = "Analyseprojekt anlegen"
-        panel.message = "Eine eigene APK-Kopie, der Bericht und alle späteren Befunde werden in diesem Projektordner gespeichert."
+        panel.title = String(localized: "Create Analysis Project")
+        panel.message = String(localized: "A separate copy of the APK, the report and all later findings are stored in this project folder.")
         panel.nameFieldStringValue = source.deletingPathExtension().lastPathComponent + ".androidlab"
-        panel.prompt = "Projekt anlegen"
+        panel.prompt = String(localized: "Create Project")
         guard panel.runModal() == .OK, let destination = panel.url else { return }
         let current = service
-        perform("Projekt wird angelegt und APK statisch analysiert …") {
+        perform(String(localized: "Creating the project and analysing the APK statically …")) {
             let store = try await ProjectStore.create(at: destination, apk: source, service: current)
             try await self.useProject(store)
-            self.message = "Analyseprojekt gespeichert. Für Laufzeittests eine Testsitzung beginnen."
+            self.message = String(localized: "Analysis project saved. Start a test session for runtime tests.")
         }
     }
     func chooseProject() {
         guard !busy else { return }
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true; panel.canChooseFiles = false
-        panel.message = "Analyseprojekt-Ordner mit project.json auswählen"
+        panel.message = String(localized: "Choose the analysis project folder that contains project.json")
         guard panel.runModal() == .OK, let url = panel.url else { return }
         openProject(url)
     }
     func openProject(_ url: URL) {
         guard !busy else { return }
-        perform("Projekt wird geöffnet und APK-Hash geprüft …") {
+        perform(String(localized: "Opening the project and verifying the APK hash …")) {
             let store = try await ProjectStore.open(at: url)
             try await self.useProject(store)
-            self.message = "Projekt geöffnet. Neue Laufzeitaktionen benötigen eine neue Testsitzung."
+            self.message = String(localized: "Project opened. New runtime actions need a new test session.")
         }
     }
     /// Back to the project overview. Like switching projects, unsaved note text is stored and an open test session ends.
@@ -43,13 +43,14 @@ extension AnalyxerModel {
         guard !busy, let store = projectStore else { return }
         let note = projectNote, session = activeSessionID
         let keepNote = !note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        perform("Projekt wird geschlossen …") {
+        perform(String(localized: "Closing the project …")) {
             if keepNote { try await store.addNote(note, sessionID: session) }
             if let session { try await store.endSession(session) }
             self.projectStore = nil; self.project = nil; self.projectDirectory = nil; self.appProfile = nil; self.profileLoading = false
             self.activeSessionID = nil; self.projectNote = ""; self.evidencePreview = nil
             self.analysisComponent = "input/application.apk"; self.apk = nil; self.report = nil
-            self.message = "Projekt geschlossen." + (keepNote ? " Die offene Notiz ist im Projekt gespeichert." : "") + (session == nil ? "" : " Die Testsitzung wurde beendet.")
+            self.message = String(localized: "Project closed.") + (keepNote ? " " + String(localized: "The open note was saved in the project.") : "")
+                + (session == nil ? "" : " " + String(localized: "The test session was ended."))
         }
     }
     private func useProject(_ incoming: ProjectStore) async throws {
@@ -78,41 +79,41 @@ extension AnalyxerModel {
             do { try await operation(store, workflow) }
             catch { self.project = await store.snapshot(); throw error }
             self.project = await store.snapshot()
-            self.message = completion ?? "\(label) – im Projekt gespeichert."
+            self.message = completion ?? String(localized: "\(label) – saved in the project.")
         }
     }
     func beginSession() {
         guard connected else { return }
         let target = serial
-        projectOperation("Testsitzung beginnen") { _, workflow in
+        projectOperation(String(localized: "Start test session")) { _, workflow in
             let session = try await workflow.begin(serial: target)
             await MainActor.run { self.activeSessionID = session.id }
         }
     }
     func finishSession() {
         guard let id = activeSessionID else { return }
-        projectOperation("Testsitzung beenden") { store, _ in
+        projectOperation(String(localized: "End test session")) { store, _ in
             try await store.endSession(id)
             await MainActor.run { self.activeSessionID = nil }
         }
     }
     func projectInstall() {
         guard let id = activeSessionID, projectSessionSelected else { return }
-        projectOperation("Projekt-APK installieren") { _, workflow in try await workflow.install(sessionID: id) }
+        projectOperation(String(localized: "Install project APK")) { _, workflow in try await workflow.install(sessionID: id) }
     }
     func projectAdoptInstalled() {
         guard let id = activeSessionID, projectSessionSelected else { return }
-        projectOperation("Installierte App prüfen und zuordnen") { _, workflow in try await workflow.adoptInstalled(sessionID: id) }
+        projectOperation(String(localized: "Verify and adopt installed app")) { _, workflow in try await workflow.adoptInstalled(sessionID: id) }
     }
     func importInstalledApp(_ package: String) {
         guard connected, !busy else { return }
         let panel = NSSavePanel()
-        panel.title = "Installierte App untersuchen"
-        panel.message = "Basis-APK und alle derzeit installierten Splits werden in einem eigenen Analyseprojekt gesichert."
+        panel.title = String(localized: "Examine Installed App")
+        panel.message = String(localized: "The base APK and all currently installed splits are saved in a separate analysis project.")
         panel.nameFieldStringValue = package + ".androidlab"
         guard panel.runModal() == .OK, let destination = panel.url else { return }
         let current = service, target = serial
-        perform("Installierte APKs werden gesichert und analysiert …") {
+        perform(String(localized: "Saving and analysing the installed APKs …")) {
             let temporary = FileManager.default.temporaryDirectory.appendingPathComponent("android-analyxer-import-" + UUID().uuidString)
             defer { try? FileManager.default.removeItem(at: temporary) }
             let capture = try await current.captureInstalledApp(serial: target, package: package, to: temporary)
@@ -124,48 +125,50 @@ extension AnalyxerModel {
             do { try await workflow.adoptInstalled(sessionID: session.id) }
             catch { self.project = await store.snapshot(); throw error }
             self.project = await store.snapshot()
-            self.message = "\(capture.files.count) APKs gesichert. Installierte App geprüft und zur Untersuchung bereit."
+            let count = capture.files.count
+            self.message = count == 1 ? String(localized: "1 APK saved. Installed app verified and ready for examination.")
+                : String(localized: "\(count) APKs saved. Installed app verified and ready for examination.")
         }
     }
     func projectLaunch() {
         guard let id = activeSessionID, projectSessionSelected else { return }
-        projectOperation("Projekt-App starten") { _, workflow in try await workflow.launch(sessionID: id) }
+        projectOperation(String(localized: "Launch project app")) { _, workflow in try await workflow.launch(sessionID: id) }
     }
     func projectLogs() {
         guard let id = activeSessionID, projectSessionSelected else { return }
-        projectOperation("App-Logcat aufnehmen") { _, workflow in try await workflow.captureLogs(sessionID: id) }
+        projectOperation(String(localized: "Capture app Logcat")) { _, workflow in try await workflow.captureLogs(sessionID: id) }
     }
     func projectScreenshot() {
         guard let id = activeSessionID, projectSessionSelected else { return }
-        projectOperation("Screenshot aufnehmen") { _, workflow in try await workflow.captureScreenshot(sessionID: id) }
+        projectOperation(String(localized: "Capture screenshot")) { _, workflow in try await workflow.captureScreenshot(sessionID: id) }
     }
     func projectNavigate(_ key: Int) {
         guard let id = activeSessionID, projectSessionSelected else { return }
-        projectOperation("Navigation ausführen") { _, workflow in try await workflow.navigate(sessionID: id, keyCode: key) }
+        projectOperation(String(localized: "Perform navigation")) { _, workflow in try await workflow.navigate(sessionID: id, keyCode: key) }
     }
     func saveProjectNote() {
         let text = projectNote, session = activeSessionID
-        projectOperation("Notiz speichern") { store, _ in
+        projectOperation(String(localized: "Save note")) { store, _ in
             try await store.addNote(text, sessionID: session)
             await MainActor.run { self.projectNote = "" }
         }
     }
     func showEvidence(_ item: ProjectEvidence) {
         guard let store = projectStore, !busy else { return }
-        perform("Befund wird geprüft …") {
+        perform(String(localized: "Checking the finding …")) {
             let data = try await store.evidenceData(id: item.id)
             self.evidencePreview = EvidencePreview(item: item, data: data)
-            self.message = "Befund geöffnet: \(item.kind.title)"
+            self.message = String(localized: "Finding opened: \(item.kind.title)")
         }
     }
     func exportProject() {
         guard projectStore != nil, !busy else { return }
         let panel = NSSavePanel()
-        panel.title = "Gesamtes Analyseprojekt exportieren"
-        panel.message = "Der Export enthält die APK, alle Befunde und einen Gesamtbericht."
-        panel.nameFieldStringValue = (project?.title ?? "Analyse") + "-export.androidlab"
-        panel.prompt = "Exportieren"
+        panel.title = String(localized: "Export Entire Analysis Project")
+        panel.message = String(localized: "The export contains the APK, all findings and a combined report.")
+        panel.nameFieldStringValue = (project?.title ?? "analysis") + "-export.androidlab"
+        panel.prompt = String(localized: "Export")
         guard panel.runModal() == .OK, let destination = panel.url else { return }
-        projectOperation("Gesamtes Projekt exportieren") { store, _ in try await store.export(to: destination) }
+        projectOperation(String(localized: "Export entire project")) { store, _ in try await store.export(to: destination) }
     }
 }

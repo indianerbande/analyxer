@@ -113,8 +113,8 @@ final class DeviceCareTests: XCTestCase {
                          isProtected: false, appBytes: sizes.0, dataBytes: sizes.1, cacheBytes: sizes.2, lastUsed: nil)
         }
         XCTAssertEqual(app("com.android.vending", system: false, sizes: (1, 2, 3)).source, "Play Store")
-        XCTAssertEqual(app(nil, system: true, sizes: (nil, nil, nil)).source, "Vorinstalliert")
-        XCTAssertEqual(app(nil, system: false, sizes: (nil, nil, nil)).source, "Sideload")
+        XCTAssertEqual(app(nil, system: true, sizes: (nil, nil, nil)).source, "Preinstalled")
+        XCTAssertEqual(app(nil, system: false, sizes: (nil, nil, nil)).source, "Sideloaded")
         XCTAssertEqual(app("com.android.shell", system: false, sizes: (nil, nil, nil)).source, "ADB")
         XCTAssertEqual(app(nil, system: false, sizes: (1, 2, 3)).totalBytes, 6)
         XCTAssertNil(app(nil, system: false, sizes: (nil, nil, nil)).totalBytes)

@@ -15,8 +15,8 @@ struct AndroidAnalyxerApp: App {
         .defaultSize(width: 1200, height: 820)
         .commands {
             CommandGroup(replacing: .newItem) {
-                Button("APK analysieren …") { model.chooseAPK() }.keyboardShortcut("o")
-                Button("Geräte aktualisieren") { Task { await model.refresh() } }.keyboardShortcut("r")
+                Button("Analyse APK …") { model.chooseAPK() }.keyboardShortcut("o")
+                Button("Refresh Devices") { Task { await model.refresh() } }.keyboardShortcut("r")
             }
         }
     }
@@ -85,7 +85,7 @@ final class AnalyxerModel: ObservableObject {
     @Published var busy = false
     @Published var refreshing = false
     @Published var startingAVDs: [String: Date] = [:]
-    @Published var message = "Bereit."
+    @Published var message = String(localized: "Ready.")
     @Published var error: String?
     @Published var apk: URL?
     @Published var report: APKReport?
@@ -145,7 +145,7 @@ final class AnalyxerModel: ObservableObject {
             let expired = startingAVDs.filter { !connectedNames.contains($0.key) && Date().timeIntervalSince($0.value) > 120 }
             startingAVDs = startingAVDs.filter { !connectedNames.contains($0.key) && Date().timeIntervalSince($0.value) <= 120 }
             if !expired.isEmpty {
-                self.error = "Für \(expired.keys.sorted().joined(separator: ", ")) wurde nach zwei Minuten keine ADB-Verbindung erkannt. Bitte das Emulatorfenster prüfen."
+                self.error = String(localized: "No ADB connection was detected for \(expired.keys.sorted().joined(separator: ", ")) after two minutes. Please check the emulator window.")
             }
             if !devices.contains(where: { $0.serial == serial }) { serial = devices.first(where: \.isOnline)?.serial ?? "" }
         } catch { self.error = error.localizedDescription }
@@ -156,17 +156,17 @@ final class AnalyxerModel: ObservableObject {
         busy = true; error = nil; message = label
         Task {
             defer { busy = false }
-            do { try await work() } catch { self.error = error.localizedDescription; message = "Aktion fehlgeschlagen." }
+            do { try await work() } catch { self.error = error.localizedDescription; message = String(localized: "Action failed.") }
         }
     }
     func start(_ avd: AVD) {
         guard !busy, startingAVDs[avd.name] == nil else { return }
         let current = service, persistent = persistentDevice
         startingAVDs[avd.name] = Date()
-        perform("\(avd.name) wird gestartet …") {
+        perform(String(localized: "Starting \(avd.name) …")) {
             do { try await current.start(avd: avd, persistent: persistent) }
             catch { self.startingAVDs.removeValue(forKey: avd.name); throw error }
-            self.message = "Start angefordert. Android öffnet sich in einem eigenen Fenster; der erste Start kann etwas dauern."
+            self.message = String(localized: "Start requested. Android opens in its own window; the first start can take a while.")
             await self.refresh()
         }
     }
@@ -174,34 +174,34 @@ final class AnalyxerModel: ObservableObject {
     func delete(_ avd: AVD) {
         guard let home = avd.home, !isRunning(avd) else { return }
         let play = PlayDeviceService(service: service, home: home)
-        perform("\(avd.name) wird in den Papierkorb gelegt …") {
+        perform(String(localized: "Moving \(avd.name) to the Trash …")) {
             try await play.delete(name: avd.name)
             await self.refresh()
-            self.message = "\(avd.name) liegt im Papierkorb. Bis zum Leeren lässt es sich von dort zurücklegen."
+            self.message = String(localized: "\(avd.name) is in the Trash. You can put it back from there until the Trash is emptied.")
         }
     }
     func rename(_ avd: AVD, to newName: String) {
         guard let home = avd.home, !isRunning(avd) else { return }
         let play = PlayDeviceService(service: service, home: home), name = newName.trimmingCharacters(in: .whitespaces)
-        perform("\(avd.name) wird umbenannt …") {
+        perform(String(localized: "Renaming \(avd.name) …")) {
             let renamed = try await play.rename(avd.name, to: name)
             await self.refresh()
-            self.message = "\(avd.name) heißt jetzt \(renamed.name). Apps, Anmeldung und Daten sind unverändert."
+            self.message = String(localized: "\(avd.name) is now called \(renamed.name). Apps, sign-in and data are unchanged.")
         }
     }
     func enableKeyboard() {
         guard connected else { return }
         let current = service, target = serial
-        perform("Bildschirmtastatur wird eingerichtet …") {
+        perform(String(localized: "Setting up the on-screen keyboard …")) {
             try await current.enableScreenKeyboard(serial: target)
-            self.message = "Bildschirmtastatur aktiviert. Das Texteingabefeld erneut anklicken; einen bereits offenen Handschriftmodus über dessen Menü verlassen."
+            self.message = String(localized: "On-screen keyboard enabled. Click the text field again; leave a handwriting mode that is already open through its menu.")
         }
     }
     func stop() {
         let current = service, target = serial
-        perform("Gerät wird beendet …") {
+        perform(String(localized: "Stopping the device …")) {
             try await current.stop(serial: target)
-            self.message = "Emulator beendet. Im dauerhaften Modus bleiben Apps und Einstellungen erhalten."
+            self.message = String(localized: "Emulator stopped. In persistent mode, apps and settings are kept.")
             await self.refresh()
         }
     }
@@ -210,7 +210,7 @@ final class AnalyxerModel: ObservableObject {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [UTType(filenameExtension: "apk") ?? .data]
         panel.canChooseDirectories = false; panel.allowsMultipleSelection = false
-        panel.message = "APK für die lokale Analyse auswählen"
+        panel.message = String(localized: "Choose an APK for local analysis")
         guard panel.runModal() == .OK, let url = panel.url else { return }
         createProject(from: url)
     }
@@ -218,58 +218,58 @@ final class AnalyxerModel: ObservableObject {
         guard !busy else { return }
         apk = url; report = nil; page = .apk
         let current = service
-        perform("APK wird untersucht …") {
+        perform(String(localized: "Inspecting the APK …")) {
             self.report = try await current.inspectAPK(at: url)
-            self.message = "APK lokal analysiert."
+            self.message = String(localized: "APK analysed locally.")
         }
     }
     func install() {
         guard let file = apk, connected else { return }
         let current = service, target = serial
-        perform("APK wird auf \(target) installiert …") {
+        perform(String(localized: "Installing the APK on \(target) …")) {
             let result = try await current.install(apk: file, serial: target)
-            self.message = "Installation auf \(target): \(result.trimmingCharacters(in: .whitespacesAndNewlines))"
+            self.message = String(localized: "Installation on \(target): \(result.trimmingCharacters(in: .whitespacesAndNewlines))")
         }
     }
     func resetInventory() { apps = []; storage = nil; leftovers = []; inventoryDate = nil }
     func loadLogs() {
         guard connected else { return }
         let current = service, target = serial
-        perform("Logcat wird gelesen …") {
+        perform(String(localized: "Reading Logcat …")) {
             let result = try await current.logs(serial: target)
             if self.serial == target { self.logText = result }
-            self.message = "Logcat-Momentaufnahme von \(target) geladen."
+            self.message = String(localized: "Logcat snapshot of \(target) loaded.")
         }
     }
     func capture() {
         guard connected else { return }
         let current = service, target = serial
-        perform("Screenshot wird aufgenommen …") {
+        perform(String(localized: "Taking a screenshot …")) {
             let data = try await current.screenshot(serial: target)
             guard let image = NSImage(data: data) else { throw CocoaError(.fileReadCorruptFile) }
             if self.serial == target { self.screenshot = image; self.screenshotData = data; self.screenshotDate = Date() }
-            self.message = "Screenshot von \(target) aufgenommen."
+            self.message = String(localized: "Screenshot of \(target) taken.")
         }
     }
     func navigate(_ key: Int) {
         guard connected else { return }
         let current = service, target = serial
-        perform("Android-Navigation …") {
+        perform(String(localized: "Android navigation …")) {
             try await current.keyevent(serial: target, keyCode: key)
-            self.message = "Navigation auf \(target) ausgeführt."
+            self.message = String(localized: "Navigation performed on \(target).")
         }
     }
     func launch(_ identifier: String) {
         guard connected else { return }
         let current = service, target = serial
-        perform("\(identifier) wird gestartet …") {
+        perform(String(localized: "Starting \(identifier) …")) {
             _ = try await current.launchPackage(identifier: identifier, serial: target)
-            self.message = "Start von \(identifier) auf \(target) angefordert."
+            self.message = String(localized: "Start of \(identifier) on \(target) requested.")
         }
     }
     func chooseSDK() {
         let panel = NSOpenPanel(); panel.canChooseDirectories = true; panel.canChooseFiles = false
-        panel.message = "Android SDK-Ordner auswählen (enthält emulator und platform-tools)"
+        panel.message = String(localized: "Choose the Android SDK folder (contains emulator and platform-tools)")
         guard panel.runModal() == .OK, let url = panel.url else { return }
         sdkRoot = url.path; UserDefaults.standard.set(sdkRoot, forKey: "sdkRoot")
         ownAVDs = []; studioAVDs = []; devices = []; serial = ""
@@ -278,7 +278,7 @@ final class AnalyxerModel: ObservableObject {
     func chooseAVDHome() {
         let panel = NSOpenPanel(); panel.canChooseDirectories = true; panel.canChooseFiles = false; panel.canCreateDirectories = true
         panel.directoryURL = avdHome
-        panel.message = "Ordner für die eigenen Geräte (AVDs) auswählen"
+        panel.message = String(localized: "Choose the folder for My Devices (AVDs)")
         guard panel.runModal() == .OK, let url = panel.url else { return }
         customAVDHome = url.path; UserDefaults.standard.set(url.path, forKey: "avdHome")
         ownAVDs = []; studioAVDs = []
@@ -287,13 +287,13 @@ final class AnalyxerModel: ObservableObject {
     func save(_ data: Data, name: String) {
         let panel = NSSavePanel(); panel.nameFieldStringValue = name
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        do { try data.write(to: url, options: .atomic); message = "Gespeichert: \(url.lastPathComponent)" }
+        do { try data.write(to: url, options: .atomic); message = String(localized: "Saved: \(url.lastPathComponent)") }
         catch { self.error = error.localizedDescription }
     }
     func exportReport() {
         guard let report, let apk else { return }
-        let output = "Android Analyxer · APK-Analyse\nDatei: \(apk.lastPathComponent)\nSHA-256: \(report.sha256)\nZeit: \(Date().ISO8601Format())\n\nBerechtigungen\n\(report.permissions.joined(separator: "\n"))\n\nManifest-Metadaten\n\(report.metadata)\n"
-        save(Data(output.utf8), name: "\(apk.deletingPathExtension().lastPathComponent)-analyse.txt")
+        let output = "Android Analyxer · APK Analysis\nFile: \(apk.lastPathComponent)\nSHA-256: \(report.sha256)\nTime: \(Date().ISO8601Format())\n\nPermissions\n\(report.permissions.joined(separator: "\n"))\n\nManifest Metadata\n\(report.metadata)\n"
+        save(Data(output.utf8), name: "\(apk.deletingPathExtension().lastPathComponent)-analysis.txt")
     }
 }
 
@@ -370,11 +370,11 @@ struct AnalyxerView: View {
             }
             Spacer()
             VStack(alignment: .leading, spacing: 10) {
-                Label("Analyse beginnt lokal", systemImage: "externaldrive").font(.caption.weight(.semibold))
-                Text("APK prüfen, Android starten und Beobachtungen exportieren.").font(.caption).foregroundStyle(.secondary).lineSpacing(4)
+                Label("Analysis starts locally", systemImage: "externaldrive").font(.caption.weight(.semibold))
+                Text("Check APKs, start Android and export observations.").font(.caption).foregroundStyle(.secondary).lineSpacing(4)
                 Text("v0.4 · macOS").font(.caption2).foregroundStyle(.tertiary)
             }.padding(14).background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 12))
-        }.padding(18).frame(width: 218).background(Color(red: 0.055, green: 0.07, blue: 0.09))
+        }.padding(18).frame(width: 236).background(Color(red: 0.055, green: 0.07, blue: 0.09))
     }
     private var header: some View {
         HStack {
@@ -384,80 +384,80 @@ struct AnalyxerView: View {
             }
             Spacer()
             Button { Task { await model.refresh() } } label: { Image(systemName: "arrow.clockwise") }
-                .help("Geräte aktualisieren").disabled(model.busy || model.refreshing)
-            Button("APK öffnen …", systemImage: "plus") { model.chooseAPK() }
+                .help("Refresh Devices").disabled(model.busy || model.refreshing)
+            Button("Open APK …", systemImage: "plus") { model.chooseAPK() }
                 .buttonStyle(.borderedProminent).disabled(model.busy)
         }.padding(26)
     }
     private var devicePage: some View {
         VStack(alignment: .leading, spacing: 24) {
             HStack(spacing: 14) {
-                metric("VIRTUELLE GERÄTE", value: "\(model.avds.count)", icon: "ipad.landscape")
-                metric("VERBUNDEN", value: "\(model.devices.filter(\.isOnline).count)", icon: "cable.connector")
-                metric("LAUFZEIT", value: "Android SDK", icon: "cpu")
+                metric("VIRTUAL DEVICES", value: "\(model.avds.count)", icon: "ipad.landscape")
+                metric("CONNECTED", value: "\(model.devices.filter(\.isOnline).count)", icon: "cable.connector")
+                metric("RUNTIME", value: "Android SDK", icon: "cpu")
             }
             PlayDeviceSetupView()
-            sectionTitle("Deine Emulatoren", note: "Eigenes Android-Fenster")
-            Toggle("Änderungen dauerhaft speichern (Apps, Anmeldung und Einstellungen)", isOn: $model.persistentDevice).disabled(model.busy)
-            if !model.persistentDevice { Text("Temporärer Modus: Änderungen werden beim Beenden verworfen.").font(.caption).foregroundStyle(.orange) }
-            sectionTitle("Eigene Geräte", note: model.avdHome.path)
+            sectionTitle("Your Emulators", note: "Each in its own Android window")
+            Toggle("Keep changes permanently (apps, sign-in and settings)", isOn: $model.persistentDevice).disabled(model.busy)
+            if !model.persistentDevice { Text("Temporary mode: changes are discarded when the emulator stops.").font(.caption).foregroundStyle(.orange) }
+            sectionTitle("My Devices", note: "\(model.avdHome.path)")
             if model.ownAVDs.isEmpty {
-                empty("Noch kein eigenes Gerät", icon: "ipad.badge.play", detail: "Oben unter Google-Play-Gerät anlegen ein Gerät erstellen. Den Ordner dafür legst du unter Einrichtung → Eigene Geräte fest.")
+                empty("No device of your own yet", icon: "ipad.badge.play", detail: "Create one above under Create Google Play Device. You set its folder under Setup → My Devices.")
             } else {
                 avdGrid(model.ownAVDs, own: true)
             }
-            sectionTitle("Android Studio", note: model.studioAVDHome.resolvingSymlinksInPath().path + " · steuerbar, Löschen nur in Android Studio")
+            sectionTitle("Android Studio", note: "\(model.studioAVDHome.resolvingSymlinksInPath().path) · can be controlled; delete in Android Studio only")
             if !model.studioAVDs.isEmpty {
                 avdGrid(model.studioAVDs, own: false)
             } else if model.playService.sharesCatalogue() {
-                Text("Gleicher Ordner wie die eigenen Geräte; die Geräte stehen nur oben.").font(.caption).foregroundStyle(.secondary)
+                Text("Same folder as My Devices; the devices are listed above only.").font(.caption).foregroundStyle(.secondary)
             } else {
-                Text("Keine Android-Studio-Geräte gefunden.").font(.caption).foregroundStyle(.secondary)
+                Text("No Android Studio devices found.").font(.caption).foregroundStyle(.secondary)
             }
-            sectionTitle("Geräte-Werkzeuge", note: "Emulator oder per ADB verbundenes Gerät")
+            sectionTitle("Device Tools", note: "Emulator or device connected via ADB")
             devicePicker
             HStack(spacing: 10) {
-                Button("Google Play öffnen", systemImage: "bag") { model.launch("com.android.vending") }
+                Button("Open Google Play", systemImage: "bag") { model.launch("com.android.vending") }
                 Button("Screenshot", systemImage: "camera") { model.capture() }
-                Button("Apps anzeigen", systemImage: "square.grid.2x2") { model.page = .packages; model.loadInventory() }
+                Button("Show Apps", systemImage: "square.grid.2x2") { model.page = .packages; model.loadInventory() }
                 Button("Logcat", systemImage: "terminal") { model.page = .logs; model.loadLogs() }
                 Spacer()
-                Button("Emulator beenden", systemImage: "stop.fill") { model.stop() }
+                Button("Stop Emulator", systemImage: "stop.fill") { model.stop() }
                     .disabled(!model.serial.hasPrefix("emulator-"))
             }.disabled(!model.connected || model.busy)
             HStack(spacing: 12) {
-                Button("Bildschirmtastatur aktivieren", systemImage: "keyboard") { model.enableKeyboard() }
-                Button("Zurück", systemImage: "chevron.left") { model.navigate(4) }
+                Button("Enable On-Screen Keyboard", systemImage: "keyboard") { model.enableKeyboard() }
+                Button("Back", systemImage: "chevron.left") { model.navigate(4) }
                 Button("Home", systemImage: "house") { model.navigate(3) }
-                Button("Letzte Apps", systemImage: "square.on.square") { model.navigate(187) }
+                Button("Recent Apps", systemImage: "square.on.square") { model.navigate(187) }
             }.disabled(!model.connected || model.busy)
             if let screenshot = model.screenshot {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
-                        Text("Bildschirmaufnahme").font(.headline)
+                        Text("Screen Capture").font(.headline)
                         if let date = model.screenshotDate { Text(date, style: .time).font(.caption).foregroundStyle(.secondary) }
                         Spacer()
-                        Button("PNG speichern …") { if let data = model.screenshotData { model.save(data, name: "android-screenshot.png") } }
+                        Button("Save PNG …") { if let data = model.screenshotData { model.save(data, name: "android-screenshot.png") } }
                     }
                     Image(nsImage: screenshot).resizable().scaledToFit().frame(maxWidth: .infinity, maxHeight: 420)
                 }.padding(20).card()
             }
         }
-        .confirmationDialog(model.avdPendingDeletion.map { "\($0.name) löschen?" } ?? "",
+        .confirmationDialog(model.avdPendingDeletion.map { String(localized: "Delete \($0.name)?") } ?? "",
                             isPresented: Binding(get: { model.avdPendingDeletion != nil }, set: { if !$0 { model.avdPendingDeletion = nil } }),
                             presenting: model.avdPendingDeletion) { avd in
-            Button("In den Papierkorb legen", role: .destructive) { model.delete(avd) }
-            Button("Abbrechen", role: .cancel) {}
+            Button("Move to Trash", role: .destructive) { model.delete(avd) }
+            Button("Cancel", role: .cancel) {}
         } message: { _ in
-            Text("Das Gerät mit allen installierten Apps, Anmeldungen und Daten wird in den Papierkorb gelegt. Bis zum Leeren des Papierkorbs lässt es sich wiederherstellen.")
+            Text("The device and all its installed apps, sign-ins and data are moved to the Trash. You can restore it until the Trash is emptied.")
         }
-        .alert("Gerät umbenennen", isPresented: Binding(get: { model.avdPendingRename != nil }, set: { if !$0 { model.avdPendingRename = nil } }),
+        .alert("Rename Device", isPresented: Binding(get: { model.avdPendingRename != nil }, set: { if !$0 { model.avdPendingRename = nil } }),
                presenting: model.avdPendingRename) { avd in
-            TextField("Neuer Name", text: $model.renameText)
-            Button("Umbenennen") { model.rename(avd, to: model.renameText) }
-            Button("Abbrechen", role: .cancel) {}
+            TextField("New name", text: $model.renameText)
+            Button("Rename") { model.rename(avd, to: model.renameText) }
+            Button("Cancel", role: .cancel) {}
         } message: { avd in
-            Text("Neuer Name für \(avd.name): mit einem Buchstaben beginnen, dann Buchstaben, Zahlen, Unterstrich oder Bindestrich. Apps, Anmeldung und Daten bleiben erhalten.")
+            Text("New name for \(avd.name): start with a letter, then letters, digits, underscores or hyphens. Apps, sign-in and data are kept.")
         }
     }
     private var apkPage: some View {
@@ -470,29 +470,29 @@ struct AnalyxerView: View {
                         Text(apk.path).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
                     }
                     Spacer()
-                    Button("Bericht exportieren …") { model.exportReport() }.disabled(model.report == nil)
+                    Button("Export Report …") { model.exportReport() }.disabled(model.report == nil)
                 }.padding(22).card()
                 if let report = model.report {
                     Text("SHA-256  \(report.sha256)").font(.system(size: 11, design: .monospaced)).textSelection(.enabled).foregroundStyle(.secondary)
-                    sectionTitle("Berechtigungen", note: "\(report.permissions.count) Deklarationen · keine Bewertung des Laufzeitverhaltens")
-                    if report.permissions.isEmpty { Text("Keine Berechtigungen deklariert.").foregroundStyle(.secondary) }
+                    sectionTitle("Permissions", note: report.permissions.count == 1 ? "1 declaration · no assessment of runtime behaviour" : "\(report.permissions.count) declarations · no assessment of runtime behaviour")
+                    if report.permissions.isEmpty { Text("No permissions declared.").foregroundStyle(.secondary) }
                     ForEach(report.permissions, id: \.self) { permission in
                         Label(permission, systemImage: "key.horizontal").font(.system(size: 12, design: .monospaced)).textSelection(.enabled)
                     }
-                    sectionTitle("Manifest-Metadaten", note: "Paket, Version, SDK-Anforderungen und unterstützte Architekturen")
+                    sectionTitle("Manifest Metadata", note: "Package, version, SDK requirements and supported architectures")
                     codePanel(report.metadata)
                 }
                 Divider()
                 devicePicker
                 HStack {
-                    Text("Installation und App-Start werden im Analyseprojekt protokolliert.").font(.caption).foregroundStyle(.secondary)
+                    Text("Installation and app launch are logged in the analysis project.").font(.caption).foregroundStyle(.secondary)
                     Spacer()
-                    Button("Zur Testsitzung", systemImage: "play.rectangle") { model.page = .projects }
+                    Button("Go to Test Session", systemImage: "play.rectangle") { model.page = .projects }
                         .disabled(model.busy || model.project == nil)
                 }
             } else {
-                empty("APK untersuchen", icon: "shippingbox", detail: "Öffne eine APK-Datei. Die Analyse liest Manifest-Metadaten und Berechtigungen aus und berechnet den SHA-256-Hash. Die App wird dabei nicht ausgeführt.")
-                Button("APK auswählen …") { model.chooseAPK() }.buttonStyle(.borderedProminent)
+                empty("Inspect an APK", icon: "shippingbox", detail: "Open an APK file. The analysis reads manifest metadata and permissions and computes the SHA-256 hash. The app is not run.")
+                Button("Choose APK …") { model.chooseAPK() }.buttonStyle(.borderedProminent)
             }
         }
     }
@@ -512,11 +512,11 @@ struct AnalyxerView: View {
         VStack(alignment: .leading, spacing: 18) {
             devicePicker
             HStack {
-                TextField("Log-Einträge filtern …", text: $model.logFilter).textFieldStyle(.roundedBorder)
-                Button("Momentaufnahme laden") { model.loadLogs() }.disabled(!model.connected || model.busy)
-                Button("Exportieren …") { model.save(Data(model.filteredLogs.utf8), name: "android-logcat.txt") }.disabled(model.logText.isEmpty)
+                TextField("Filter log entries …", text: $model.logFilter).textFieldStyle(.roundedBorder)
+                Button("Load Snapshot") { model.loadLogs() }.disabled(!model.connected || model.busy)
+                Button("Export …") { model.save(Data(model.filteredLogs.utf8), name: "android-logcat.txt") }.disabled(model.logText.isEmpty)
             }
-            if model.logText.isEmpty { empty("Laufzeit beobachten", icon: "terminal", detail: "Starte die zu untersuchende App im Android-Fenster und lade anschließend die aktuellen Logs.") }
+            if model.logText.isEmpty { empty("Observe the runtime", icon: "terminal", detail: "Start the app you want to examine in the Android window, then load the current logs.") }
             else { codePanel(model.filteredLogs) }
         }
     }
@@ -537,43 +537,43 @@ struct AnalyxerView: View {
                 Spacer()
             }.padding(20).card()
             ToolSetupView()
-            sectionTitle("Android SDK", note: "Die Werkzeuge werden aus deiner lokalen Installation verwendet.")
+            sectionTitle("Android SDK", note: "The tools are taken from your local installation.")
             HStack {
                 Text(model.sdkRoot).font(.system(size: 12, design: .monospaced)).textSelection(.enabled)
-                Spacer(); Button("Ordner wählen …") { model.chooseSDK() }.disabled(model.busy || model.refreshing)
+                Spacer(); Button("Choose Folder …") { model.chooseSDK() }.disabled(model.busy || model.refreshing)
             }.padding(20).card()
-            sectionTitle("Eigene Geräte", note: "Ordner für die in der App angelegten AVDs; sie lassen sich in der App löschen. Android-Studio-Geräte erscheinen getrennt und werden nur gesteuert.")
+            sectionTitle("My Devices", note: "Folder for the AVDs created in the app; they can be deleted in the app. Android Studio devices appear separately and are only controlled.")
             HStack {
                 Text(model.avdHome.path).font(.system(size: 12, design: .monospaced)).textSelection(.enabled)
-                Spacer(); Button("Ordner wählen …") { model.chooseAVDHome() }.disabled(model.busy || model.refreshing)
+                Spacer(); Button("Choose Folder …") { model.chooseAVDHome() }.disabled(model.busy || model.refreshing)
             }.padding(20).card()
             ForEach(model.paths.diagnostics, id: \.self) { Text($0).font(.callout).foregroundStyle(.secondary) }
             toolRow("Android Emulator", present: model.paths.emulator != nil)
             toolRow("Android Debug Bridge", present: model.paths.adb != nil)
-            toolRow("AAPT2 · APK-Metadaten", present: model.paths.aapt2 != nil)
-            toolRow("APK Analyzer · Manifest und DEX", present: model.paths.apkanalyzer != nil)
+            toolRow("AAPT2 · APK metadata", present: model.paths.aapt2 != nil)
+            toolRow("APK Analyzer · manifest and DEX", present: model.paths.apkanalyzer != nil)
             Divider()
-            Text("Neue Geräte").font(.headline)
-            Text("Google-Play-Geräte unter Geräte → Google-Play-Gerät anlegen. Andere Geräte in Android Studio → Device Manager → Create Virtual Device anlegen (auf Apple Silicon mit ARM64-System-Image); sie erscheinen unter Geräte → Android Studio.").foregroundStyle(.secondary)
-            Text("Temporäre Analysesitzungen").font(.headline)
-            Text("Von Android Analyxer gestartete Emulatoren verwenden den Read-only-Modus ohne Snapshots. Installationen und Änderungen werden beim Beenden verworfen. Bereits laufende oder physische Geräte behalten ihre eigenen Einstellungen.").foregroundStyle(.secondary)
-            Text("Ausbau zur App-Analyse").font(.headline)
-            Text("Analyseprojekte speichern die APK, den statischen Bericht mit Manifest-Komponenten und DEX-Inventar sowie Testsitzungen mit App-Logs, Screenshots und Notizen. Java-/Kotlin-Dekompilierung über JADX, native REA-Analyse und Netzwerkmitschnitte sind weitere Ausbaustufen.").foregroundStyle(.secondary)
+            Text("New Devices").font(.headline)
+            Text("Google Play devices under Devices → Create Google Play Device. Create other devices in Android Studio → Device Manager → Create Virtual Device (with an ARM64 system image on Apple Silicon); they appear under Devices → Android Studio.").foregroundStyle(.secondary)
+            Text("Temporary Analysis Sessions").font(.headline)
+            Text("Emulators started by Android Analyxer use read-only mode without snapshots. Installations and changes are discarded when the emulator stops. Devices that are already running and physical devices keep their own settings.").foregroundStyle(.secondary)
+            Text("Expanding into App Analysis").font(.headline)
+            Text("Analysis projects store the APK, the static report with manifest components and DEX inventory, and test sessions with app logs, screenshots and notes. Java/Kotlin decompilation via JADX, native REA analysis and network captures are further stages.").foregroundStyle(.secondary)
         }.lineSpacing(4)
     }
     private var devicePicker: some View {
         HStack(spacing: 14) {
             Circle().fill(model.connected ? accent : .gray).frame(width: 8, height: 8)
-            Picker("Zielgerät", selection: $model.serial) {
-                Text("Gerät auswählen").tag("")
+            Picker("Target device", selection: $model.serial) {
+                Text("Select a device").tag("")
                 ForEach(model.devices) { device in
                     Text("\(device.avdName ?? device.model) · \(device.serial) · \(device.state)").tag(device.serial)
                 }
             }.disabled(model.busy)
-            if model.devices.isEmpty { Text("Kein Gerät verbunden").font(.caption).foregroundStyle(.secondary) }
+            if model.devices.isEmpty { Text("No device connected").font(.caption).foregroundStyle(.secondary) }
         }.padding(16).card()
     }
-    private func metric(_ title: String, value: String, icon: String) -> some View {
+    private func metric(_ title: LocalizedStringKey, value: String, icon: String) -> some View {
         VStack(alignment: .leading, spacing: 15) {
             HStack { Text(title).font(.system(size: 9, weight: .semibold)).tracking(1); Spacer(); Image(systemName: icon).foregroundStyle(accent) }
                 .foregroundStyle(.secondary)
@@ -587,37 +587,37 @@ struct AnalyxerView: View {
                     HStack {
                         Image(systemName: "ipad.landscape").font(.system(size: 30)).foregroundStyle(accent)
                         Spacer()
-                        Text(model.startingAVDs[avd.name] != nil ? "STARTET" : (model.devices.contains { $0.avdName == avd.name && $0.isOnline } ? "VERBUNDEN" : "VERFÜGBAR"))
+                        Text(model.startingAVDs[avd.name] != nil ? "STARTING" : (model.devices.contains { $0.avdName == avd.name && $0.isOnline } ? "CONNECTED" : "AVAILABLE"))
                             .font(.system(size: 9, weight: .semibold, design: .monospaced)).foregroundStyle(accent)
                     }
                     VStack(alignment: .leading, spacing: 4) {
                         Text(avd.name.replacingOccurrences(of: "_", with: " ")).font(.headline).lineLimit(2)
-                        Text(model.avdSystems[avd.id]?.summary ?? "System unbekannt").font(.caption).foregroundStyle(.secondary).lineLimit(2).fixedSize(horizontal: false, vertical: true)
+                        Text(model.avdSystems[avd.id]?.summary ?? String(localized: "System unknown")).font(.caption).foregroundStyle(.secondary).lineLimit(2).fixedSize(horizontal: false, vertical: true)
                     }
                     HStack {
-                        Text(own ? "Eigenes Gerät" : "Android Studio").font(.caption).foregroundStyle(.secondary)
+                        Text(own ? "My device" : "Android Studio").font(.caption).foregroundStyle(.secondary)
                         Spacer()
                         if own {
-                            Button("Umbenennen …", systemImage: "pencil") { model.renameText = avd.name; model.avdPendingRename = avd }
+                            Button("Rename …", systemImage: "pencil") { model.renameText = avd.name; model.avdPendingRename = avd }
                                 .labelStyle(.iconOnly)
                                 .disabled(model.busy || model.isRunning(avd))
-                                .help(model.isRunning(avd) ? "Zum Umbenennen zuerst den Emulator beenden" : "Gerät umbenennen")
-                            Button("Löschen …", systemImage: "trash", role: .destructive) { model.avdPendingDeletion = avd }
+                                .help(model.isRunning(avd) ? "Stop the emulator before renaming it" : "Rename the device")
+                            Button("Delete …", systemImage: "trash", role: .destructive) { model.avdPendingDeletion = avd }
                                 .labelStyle(.iconOnly)
                                 .disabled(model.busy || model.isRunning(avd))
-                                .help(model.isRunning(avd) ? "Zum Löschen zuerst den Emulator beenden" : "Gerät in den Papierkorb legen")
+                                .help(model.isRunning(avd) ? "Stop the emulator before deleting it" : "Move the device to the Trash")
                         }
-                        Button(model.startingAVDs[avd.name] != nil ? "Startet …" : "Starten", systemImage: "play.fill") { model.start(avd) }
+                        Button(model.startingAVDs[avd.name] != nil ? "Starting …" : "Start", systemImage: "play.fill") { model.start(avd) }
                             .disabled(model.busy || model.isRunning(avd))
                     }
                 }.padding(20).card()
             }
         }
     }
-    private func sectionTitle(_ title: String, note: String) -> some View {
+    private func sectionTitle(_ title: LocalizedStringKey, note: LocalizedStringKey) -> some View {
         VStack(alignment: .leading, spacing: 6) { Text(title).font(.headline); Text(note).font(.caption).foregroundStyle(.secondary) }
     }
-    private func empty(_ title: String, icon: String, detail: String) -> some View {
+    private func empty(_ title: LocalizedStringKey, icon: String, detail: LocalizedStringKey) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             Image(systemName: icon).font(.system(size: 30)).foregroundStyle(accent)
             Text(title).font(.title3.weight(.semibold))
@@ -630,8 +630,8 @@ struct AnalyxerView: View {
                 .frame(maxWidth: .infinity, alignment: .leading).padding(18)
         }.background(.black.opacity(0.22), in: RoundedRectangle(cornerRadius: 12))
     }
-    private func toolRow(_ title: String, present: Bool) -> some View {
-        HStack { Image(systemName: present ? "checkmark.circle.fill" : "exclamationmark.circle").foregroundStyle(present ? accent : .orange); Text(title); Spacer(); Text(present ? "Gefunden" : "Fehlt").font(.caption).foregroundStyle(.secondary) }
+    private func toolRow(_ title: LocalizedStringKey, present: Bool) -> some View {
+        HStack { Image(systemName: present ? "checkmark.circle.fill" : "exclamationmark.circle").foregroundStyle(present ? accent : .orange); Text(title); Spacer(); Text(present ? "Found" : "Missing").font(.caption).foregroundStyle(.secondary) }
     }
 }
 

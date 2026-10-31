@@ -93,8 +93,8 @@ final class NetworkCaptureTests: XCTestCase {
         let result = try await EmulatorService(paths: SDKPaths(root: root), runner: runner).captureNetwork(serial: "emulator-5590", duration: 1)
         XCTAssertEqual(result.pcap, header)
         XCTAssertEqual(result.metadata.packetCount, 0)
-        XCTAssertTrue(result.metadata.reportText.contains("netsim-WLAN"))
-        XCTAssertTrue(result.metadata.reportText.contains("Keine Zuordnung"))
+        XCTAssertTrue(result.metadata.reportText.contains("netsim Wi-Fi"))
+        XCTAssertTrue(result.metadata.reportText.contains("not attributed to the project app"))
         let commands = await runner.recorded()
         XCTAssertTrue(commands.allSatisfy { Array($0.prefix(2)) == ["-s", "emulator-5590"] })
         XCTAssertEqual(commands.last, ["-s", "emulator-5590", "emu", "network", "capture", "stop"])
@@ -129,7 +129,7 @@ final class NetworkCaptureTests: XCTestCase {
         do {
             _ = try await EmulatorService(paths: SDKPaths(root: root), runner: runner).captureNetwork(serial: "emulator-5594", duration: 1)
             XCTFail("Reboot accepted")
-        } catch { XCTAssertTrue(error.localizedDescription.contains("neu gestartet")) }
+        } catch { XCTAssertTrue(error.localizedDescription.contains("restarted during the capture")) }
         let commands = await runner.recorded()
         XCTAssertFalse(commands.contains { $0.last == "stop" })
     }

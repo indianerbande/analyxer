@@ -38,4 +38,4 @@ ditto "$APP" "$STAGE"
 rm -rf "$INSTALLED"
 mv "$STAGE" "$INSTALLED"
 printf 'Installed: %s\n' "$INSTALLED"
-if pgrep -xq AndroidAnalyxer; then printf 'Hinweis: Android Analyxer läuft noch; die neue Version gilt nach einem Neustart der App.\n'; fi
+if pgrep -xq AndroidAnalyxer; then printf 'Note: Android Analyxer is still running; the new version takes effect after restarting the app.\n'; fi

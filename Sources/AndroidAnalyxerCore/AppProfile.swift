@@ -1,5 +1,8 @@
 import Foundation
 
+/// Looks up a catalogue text (permission labels, groups, library names and categories) in the app's localization.
+private func profileText(_ english: String) -> String { String(localized: String.LocalizationValue(english)) }
+
 // MARK: Permissions
 
 /// How Android grants a permission; ordered from most to least noteworthy.
@@ -8,13 +11,13 @@ public enum PermissionLevel: Int, Comparable, Sendable, CaseIterable {
     public static func < (lhs: Self, rhs: Self) -> Bool { lhs.rawValue < rhs.rawValue }
     public var title: String {
         switch self {
-        case .special: "Sonderzugriff"
-        case .dangerous: "Freigabe nötig"
-        case .systemOnly: "nur Systemapps"
-        case .normal: "ohne Rückfrage"
-        case .vendor: "Hersteller"
-        case .appSpecific: "App-intern"
-        case .unknown: "unbekannt"
+        case .special: String(localized: "Special access")
+        case .dangerous: String(localized: "Needs approval")
+        case .systemOnly: String(localized: "System apps only")
+        case .normal: String(localized: "No prompt")
+        case .vendor: String(localized: "Vendor")
+        case .appSpecific: String(localized: "App-internal")
+        case .unknown: String(localized: "Unknown")
         }
     }
 }
@@ -28,118 +31,118 @@ public struct PermissionInfo: Hashable, Sendable, Identifiable {
 }
 
 public enum PermissionCatalog {
-    /// Display order of the groups.
-    public static let groups = ["Standort", "Kamera & Mikrofon", "Kontakte & Konten", "Kalender", "Telefon & Anrufe", "SMS & MMS",
-                                "Fotos, Medien & Dateien", "Körper & Aktivität", "Geräte in der Nähe", "Werbung & Tracking",
-                                "Über anderen Apps & Systemzugriff", "Hintergrund & Autostart", "Benachrichtigungen", "Netzwerk & Internet",
-                                "Käufe & Lizenzen", "Push-Nachrichten", "Hardware & Sonstiges", "Herstellerschnittstellen", "App-intern", "Sonstiges"]
+    /// Display order of the groups (localized, like `PermissionInfo.group`).
+    public static let groups = ["Location", "Camera & Microphone", "Contacts & Accounts", "Calendar", "Phone & Calls", "SMS & MMS",
+                                "Photos, Media & Files", "Body & Activity", "Nearby Devices", "Advertising & Tracking",
+                                "Overlays & System Access", "Background & Autostart", "Notifications", "Network & Internet",
+                                "Purchases & Licences", "Push Messages", "Hardware & Other", "Vendor Interfaces", "App-Internal", "Other"].map(profileText)
 
     private typealias Entry = (label: String, group: String, level: PermissionLevel)
     private static let android: [String: Entry] = [
-        "ACCESS_FINE_LOCATION": ("Genauer Standort (GPS)", "Standort", .dangerous),
-        "ACCESS_COARSE_LOCATION": ("Ungefährer Standort", "Standort", .dangerous),
-        "ACCESS_BACKGROUND_LOCATION": ("Standort auch im Hintergrund", "Standort", .dangerous),
-        "ACCESS_MEDIA_LOCATION": ("Aufnahmeorte in Fotos lesen", "Standort", .dangerous),
-        "ACCESS_LOCATION_EXTRA_COMMANDS": ("Zusätzliche Standortbefehle", "Standort", .normal),
-        "CAMERA": ("Kamera", "Kamera & Mikrofon", .dangerous),
-        "RECORD_AUDIO": ("Mikrofon", "Kamera & Mikrofon", .dangerous),
-        "MODIFY_AUDIO_SETTINGS": ("Audioeinstellungen ändern", "Kamera & Mikrofon", .normal),
-        "READ_CONTACTS": ("Kontakte lesen", "Kontakte & Konten", .dangerous),
-        "WRITE_CONTACTS": ("Kontakte ändern", "Kontakte & Konten", .dangerous),
-        "GET_ACCOUNTS": ("Konten auf dem Gerät auflisten", "Kontakte & Konten", .dangerous),
-        "READ_PROFILE": ("Eigenes Profil lesen (veraltet)", "Kontakte & Konten", .normal),
-        "READ_CALENDAR": ("Kalender lesen", "Kalender", .dangerous),
-        "WRITE_CALENDAR": ("Kalender ändern", "Kalender", .dangerous),
-        "READ_PHONE_STATE": ("Telefonstatus und Gerätekennungen", "Telefon & Anrufe", .dangerous),
-        "READ_PHONE_NUMBERS": ("Eigene Telefonnummer", "Telefon & Anrufe", .dangerous),
-        "CALL_PHONE": ("Anrufe tätigen", "Telefon & Anrufe", .dangerous),
-        "ANSWER_PHONE_CALLS": ("Anrufe annehmen", "Telefon & Anrufe", .dangerous),
-        "READ_CALL_LOG": ("Anrufliste lesen", "Telefon & Anrufe", .dangerous),
-        "WRITE_CALL_LOG": ("Anrufliste ändern", "Telefon & Anrufe", .dangerous),
-        "PROCESS_OUTGOING_CALLS": ("Ausgehende Anrufe umleiten", "Telefon & Anrufe", .dangerous),
-        "ADD_VOICEMAIL": ("Mailbox-Nachrichten hinzufügen", "Telefon & Anrufe", .dangerous),
-        "USE_SIP": ("Internettelefonie (SIP)", "Telefon & Anrufe", .dangerous),
-        "MANAGE_OWN_CALLS": ("Eigene Anrufe verwalten", "Telefon & Anrufe", .normal),
-        "READ_PRIVILEGED_PHONE_STATE": ("Geschützte Telefonkennungen", "Telefon & Anrufe", .systemOnly),
-        "SEND_SMS": ("SMS senden", "SMS & MMS", .dangerous),
-        "RECEIVE_SMS": ("SMS empfangen", "SMS & MMS", .dangerous),
-        "READ_SMS": ("SMS lesen", "SMS & MMS", .dangerous),
-        "RECEIVE_MMS": ("MMS empfangen", "SMS & MMS", .dangerous),
-        "RECEIVE_WAP_PUSH": ("WAP-Push empfangen", "SMS & MMS", .dangerous),
-        "READ_EXTERNAL_STORAGE": ("Gemeinsamen Speicher lesen", "Fotos, Medien & Dateien", .dangerous),
-        "WRITE_EXTERNAL_STORAGE": ("Gemeinsamen Speicher schreiben", "Fotos, Medien & Dateien", .dangerous),
-        "READ_MEDIA_IMAGES": ("Fotos lesen", "Fotos, Medien & Dateien", .dangerous),
-        "READ_MEDIA_VIDEO": ("Videos lesen", "Fotos, Medien & Dateien", .dangerous),
-        "READ_MEDIA_AUDIO": ("Musik und Audio lesen", "Fotos, Medien & Dateien", .dangerous),
-        "READ_MEDIA_VISUAL_USER_SELECTED": ("Vom Nutzer ausgewählte Fotos und Videos", "Fotos, Medien & Dateien", .dangerous),
-        "MANAGE_EXTERNAL_STORAGE": ("Zugriff auf alle Dateien", "Fotos, Medien & Dateien", .special),
-        "MANAGE_MEDIA": ("Medien ohne Rückfrage ändern", "Fotos, Medien & Dateien", .special),
-        "MOUNT_UNMOUNT_FILESYSTEMS": ("Speicher ein- und aushängen", "Fotos, Medien & Dateien", .systemOnly),
-        "BODY_SENSORS": ("Körpersensoren (z. B. Puls)", "Körper & Aktivität", .dangerous),
-        "BODY_SENSORS_BACKGROUND": ("Körpersensoren im Hintergrund", "Körper & Aktivität", .dangerous),
-        "ACTIVITY_RECOGNITION": ("Körperliche Aktivität erkennen", "Körper & Aktivität", .dangerous),
-        "HIGH_SAMPLING_RATE_SENSORS": ("Bewegungssensoren mit hoher Rate", "Körper & Aktivität", .normal),
-        "BLUETOOTH": ("Bluetooth", "Geräte in der Nähe", .normal),
-        "BLUETOOTH_ADMIN": ("Bluetooth verwalten", "Geräte in der Nähe", .normal),
-        "BLUETOOTH_SCAN": ("Bluetooth-Geräte suchen", "Geräte in der Nähe", .dangerous),
-        "BLUETOOTH_CONNECT": ("Mit Bluetooth-Geräten verbinden", "Geräte in der Nähe", .dangerous),
-        "BLUETOOTH_ADVERTISE": ("Für Bluetooth-Geräte sichtbar werden", "Geräte in der Nähe", .dangerous),
-        "NEARBY_WIFI_DEVICES": ("WLAN-Geräte in der Nähe", "Geräte in der Nähe", .dangerous),
-        "UWB_RANGING": ("Ultrabreitband-Ortung", "Geräte in der Nähe", .dangerous),
-        "NFC": ("NFC", "Geräte in der Nähe", .normal),
-        "CHANGE_WIFI_MULTICAST_STATE": ("WLAN-Multicast empfangen", "Geräte in der Nähe", .normal),
-        "ACCESS_ADSERVICES_AD_ID": ("Werbe-ID (Privacy Sandbox)", "Werbung & Tracking", .normal),
-        "ACCESS_ADSERVICES_ATTRIBUTION": ("Werbe-Attribution (Privacy Sandbox)", "Werbung & Tracking", .normal),
-        "ACCESS_ADSERVICES_TOPICS": ("Interessen-Themen für Werbung", "Werbung & Tracking", .normal),
-        "ACCESS_ADSERVICES_CUSTOM_AUDIENCE": ("Werbe-Zielgruppen (Protected Audience)", "Werbung & Tracking", .normal),
-        "SYSTEM_ALERT_WINDOW": ("Über anderen Apps einblenden", "Über anderen Apps & Systemzugriff", .special),
-        "WRITE_SETTINGS": ("Systemeinstellungen ändern", "Über anderen Apps & Systemzugriff", .special),
-        "PACKAGE_USAGE_STATS": ("Nutzungsstatistik anderer Apps", "Über anderen Apps & Systemzugriff", .special),
-        "REQUEST_INSTALL_PACKAGES": ("Andere Apps installieren", "Über anderen Apps & Systemzugriff", .special),
-        "USE_FULL_SCREEN_INTENT": ("Vollbild-Benachrichtigungen", "Über anderen Apps & Systemzugriff", .special),
-        "QUERY_ALL_PACKAGES": ("Alle installierten Apps sehen", "Über anderen Apps & Systemzugriff", .normal),
-        "REQUEST_DELETE_PACKAGES": ("Deinstallation anderer Apps anfragen", "Über anderen Apps & Systemzugriff", .normal),
-        "KILL_BACKGROUND_PROCESSES": ("Hintergrundprozesse anderer Apps beenden", "Über anderen Apps & Systemzugriff", .normal),
-        "GET_TASKS": ("Laufende Apps abfragen (veraltet)", "Über anderen Apps & Systemzugriff", .normal),
-        "REORDER_TASKS": ("Laufende Apps nach vorn holen", "Über anderen Apps & Systemzugriff", .normal),
-        "DISABLE_KEYGUARD": ("Displaysperre aufheben", "Über anderen Apps & Systemzugriff", .normal),
-        "EXPAND_STATUS_BAR": ("Statusleiste aufklappen", "Über anderen Apps & Systemzugriff", .normal),
-        "READ_LOGS": ("Systemprotokolle lesen", "Über anderen Apps & Systemzugriff", .systemOnly),
-        "WRITE_SECURE_SETTINGS": ("Geschützte Einstellungen ändern", "Über anderen Apps & Systemzugriff", .systemOnly),
-        "INSTALL_PACKAGES": ("Apps ohne Rückfrage installieren", "Über anderen Apps & Systemzugriff", .systemOnly),
-        "CHANGE_CONFIGURATION": ("Systemkonfiguration ändern", "Über anderen Apps & Systemzugriff", .systemOnly),
-        "RECEIVE_BOOT_COMPLETED": ("Startet beim Hochfahren", "Hintergrund & Autostart", .normal),
-        "WAKE_LOCK": ("Verhindert Standby", "Hintergrund & Autostart", .normal),
-        "FOREGROUND_SERVICE": ("Dauerhafte Hintergrunddienste", "Hintergrund & Autostart", .normal),
-        "SCHEDULE_EXACT_ALARM": ("Exakte Wecker und Zeitpläne", "Hintergrund & Autostart", .special),
-        "USE_EXACT_ALARM": ("Exakte Wecker (Kalender-/Weckerapps)", "Hintergrund & Autostart", .normal),
-        "REQUEST_IGNORE_BATTERY_OPTIMIZATIONS": ("Akku-Optimierung umgehen (anfragen)", "Hintergrund & Autostart", .normal),
-        "RUN_USER_INITIATED_JOBS": ("Vom Nutzer gestartete Hintergrundaufgaben", "Hintergrund & Autostart", .normal),
-        "POST_NOTIFICATIONS": ("Benachrichtigungen anzeigen", "Benachrichtigungen", .dangerous),
-        "VIBRATE": ("Vibration", "Benachrichtigungen", .normal),
-        "ACCESS_NOTIFICATION_POLICY": ("Nicht-stören-Einstellungen", "Benachrichtigungen", .normal),
-        "INTERNET": ("Internetzugriff", "Netzwerk & Internet", .normal),
-        "ACCESS_NETWORK_STATE": ("Netzwerkstatus", "Netzwerk & Internet", .normal),
-        "ACCESS_WIFI_STATE": ("WLAN-Status", "Netzwerk & Internet", .normal),
-        "CHANGE_WIFI_STATE": ("WLAN ein- und ausschalten", "Netzwerk & Internet", .normal),
-        "CHANGE_NETWORK_STATE": ("Netzwerkverbindung ändern", "Netzwerk & Internet", .normal),
-        "USE_BIOMETRIC": ("Biometrische Anmeldung", "Hardware & Sonstiges", .normal),
-        "USE_FINGERPRINT": ("Fingerabdruck (veraltet)", "Hardware & Sonstiges", .normal),
-        "FLASHLIGHT": ("Taschenlampe", "Hardware & Sonstiges", .normal),
-        "TRANSMIT_IR": ("Infrarot senden", "Hardware & Sonstiges", .normal),
-        "SET_WALLPAPER": ("Hintergrundbild setzen", "Hardware & Sonstiges", .normal),
-        "READ_SYNC_SETTINGS": ("Synchronisierungseinstellungen lesen", "Hardware & Sonstiges", .normal),
-        "WRITE_SYNC_SETTINGS": ("Synchronisierung ein- und ausschalten", "Hardware & Sonstiges", .normal),
+        "ACCESS_FINE_LOCATION": ("Precise location (GPS)", "Location", .dangerous),
+        "ACCESS_COARSE_LOCATION": ("Approximate location", "Location", .dangerous),
+        "ACCESS_BACKGROUND_LOCATION": ("Location, also in the background", "Location", .dangerous),
+        "ACCESS_MEDIA_LOCATION": ("Read locations in photos", "Location", .dangerous),
+        "ACCESS_LOCATION_EXTRA_COMMANDS": ("Extra location commands", "Location", .normal),
+        "CAMERA": ("Camera", "Camera & Microphone", .dangerous),
+        "RECORD_AUDIO": ("Microphone", "Camera & Microphone", .dangerous),
+        "MODIFY_AUDIO_SETTINGS": ("Change audio settings", "Camera & Microphone", .normal),
+        "READ_CONTACTS": ("Read contacts", "Contacts & Accounts", .dangerous),
+        "WRITE_CONTACTS": ("Change contacts", "Contacts & Accounts", .dangerous),
+        "GET_ACCOUNTS": ("List accounts on the device", "Contacts & Accounts", .dangerous),
+        "READ_PROFILE": ("Read own profile (deprecated)", "Contacts & Accounts", .normal),
+        "READ_CALENDAR": ("Read calendar", "Calendar", .dangerous),
+        "WRITE_CALENDAR": ("Change calendar", "Calendar", .dangerous),
+        "READ_PHONE_STATE": ("Phone status and device identifiers", "Phone & Calls", .dangerous),
+        "READ_PHONE_NUMBERS": ("Own phone number", "Phone & Calls", .dangerous),
+        "CALL_PHONE": ("Make calls", "Phone & Calls", .dangerous),
+        "ANSWER_PHONE_CALLS": ("Answer calls", "Phone & Calls", .dangerous),
+        "READ_CALL_LOG": ("Read call log", "Phone & Calls", .dangerous),
+        "WRITE_CALL_LOG": ("Change call log", "Phone & Calls", .dangerous),
+        "PROCESS_OUTGOING_CALLS": ("Redirect outgoing calls", "Phone & Calls", .dangerous),
+        "ADD_VOICEMAIL": ("Add voicemail messages", "Phone & Calls", .dangerous),
+        "USE_SIP": ("Internet calling (SIP)", "Phone & Calls", .dangerous),
+        "MANAGE_OWN_CALLS": ("Manage own calls", "Phone & Calls", .normal),
+        "READ_PRIVILEGED_PHONE_STATE": ("Protected phone identifiers", "Phone & Calls", .systemOnly),
+        "SEND_SMS": ("Send SMS", "SMS & MMS", .dangerous),
+        "RECEIVE_SMS": ("Receive SMS", "SMS & MMS", .dangerous),
+        "READ_SMS": ("Read SMS", "SMS & MMS", .dangerous),
+        "RECEIVE_MMS": ("Receive MMS", "SMS & MMS", .dangerous),
+        "RECEIVE_WAP_PUSH": ("Receive WAP push", "SMS & MMS", .dangerous),
+        "READ_EXTERNAL_STORAGE": ("Read shared storage", "Photos, Media & Files", .dangerous),
+        "WRITE_EXTERNAL_STORAGE": ("Write shared storage", "Photos, Media & Files", .dangerous),
+        "READ_MEDIA_IMAGES": ("Read photos", "Photos, Media & Files", .dangerous),
+        "READ_MEDIA_VIDEO": ("Read videos", "Photos, Media & Files", .dangerous),
+        "READ_MEDIA_AUDIO": ("Read music and audio", "Photos, Media & Files", .dangerous),
+        "READ_MEDIA_VISUAL_USER_SELECTED": ("Photos and videos chosen by the user", "Photos, Media & Files", .dangerous),
+        "MANAGE_EXTERNAL_STORAGE": ("Access to all files", "Photos, Media & Files", .special),
+        "MANAGE_MEDIA": ("Change media without asking", "Photos, Media & Files", .special),
+        "MOUNT_UNMOUNT_FILESYSTEMS": ("Mount and unmount storage", "Photos, Media & Files", .systemOnly),
+        "BODY_SENSORS": ("Body sensors (e.g. heart rate)", "Body & Activity", .dangerous),
+        "BODY_SENSORS_BACKGROUND": ("Body sensors in the background", "Body & Activity", .dangerous),
+        "ACTIVITY_RECOGNITION": ("Recognise physical activity", "Body & Activity", .dangerous),
+        "HIGH_SAMPLING_RATE_SENSORS": ("High-rate motion sensors", "Body & Activity", .normal),
+        "BLUETOOTH": ("Bluetooth", "Nearby Devices", .normal),
+        "BLUETOOTH_ADMIN": ("Manage Bluetooth", "Nearby Devices", .normal),
+        "BLUETOOTH_SCAN": ("Scan for Bluetooth devices", "Nearby Devices", .dangerous),
+        "BLUETOOTH_CONNECT": ("Connect to Bluetooth devices", "Nearby Devices", .dangerous),
+        "BLUETOOTH_ADVERTISE": ("Become visible to Bluetooth devices", "Nearby Devices", .dangerous),
+        "NEARBY_WIFI_DEVICES": ("Nearby Wi-Fi devices", "Nearby Devices", .dangerous),
+        "UWB_RANGING": ("Ultra-wideband ranging", "Nearby Devices", .dangerous),
+        "NFC": ("NFC", "Nearby Devices", .normal),
+        "CHANGE_WIFI_MULTICAST_STATE": ("Receive Wi-Fi multicast", "Nearby Devices", .normal),
+        "ACCESS_ADSERVICES_AD_ID": ("Advertising ID (Privacy Sandbox)", "Advertising & Tracking", .normal),
+        "ACCESS_ADSERVICES_ATTRIBUTION": ("Ad attribution (Privacy Sandbox)", "Advertising & Tracking", .normal),
+        "ACCESS_ADSERVICES_TOPICS": ("Interest topics for advertising", "Advertising & Tracking", .normal),
+        "ACCESS_ADSERVICES_CUSTOM_AUDIENCE": ("Ad audiences (Protected Audience)", "Advertising & Tracking", .normal),
+        "SYSTEM_ALERT_WINDOW": ("Display over other apps", "Overlays & System Access", .special),
+        "WRITE_SETTINGS": ("Change system settings", "Overlays & System Access", .special),
+        "PACKAGE_USAGE_STATS": ("Usage statistics of other apps", "Overlays & System Access", .special),
+        "REQUEST_INSTALL_PACKAGES": ("Install other apps", "Overlays & System Access", .special),
+        "USE_FULL_SCREEN_INTENT": ("Full-screen notifications", "Overlays & System Access", .special),
+        "QUERY_ALL_PACKAGES": ("See all installed apps", "Overlays & System Access", .normal),
+        "REQUEST_DELETE_PACKAGES": ("Request uninstalling other apps", "Overlays & System Access", .normal),
+        "KILL_BACKGROUND_PROCESSES": ("End background processes of other apps", "Overlays & System Access", .normal),
+        "GET_TASKS": ("Query running apps (deprecated)", "Overlays & System Access", .normal),
+        "REORDER_TASKS": ("Bring running apps to the front", "Overlays & System Access", .normal),
+        "DISABLE_KEYGUARD": ("Dismiss the screen lock", "Overlays & System Access", .normal),
+        "EXPAND_STATUS_BAR": ("Expand the status bar", "Overlays & System Access", .normal),
+        "READ_LOGS": ("Read system logs", "Overlays & System Access", .systemOnly),
+        "WRITE_SECURE_SETTINGS": ("Change protected settings", "Overlays & System Access", .systemOnly),
+        "INSTALL_PACKAGES": ("Install apps without asking", "Overlays & System Access", .systemOnly),
+        "CHANGE_CONFIGURATION": ("Change system configuration", "Overlays & System Access", .systemOnly),
+        "RECEIVE_BOOT_COMPLETED": ("Starts at boot", "Background & Autostart", .normal),
+        "WAKE_LOCK": ("Prevents standby", "Background & Autostart", .normal),
+        "FOREGROUND_SERVICE": ("Persistent background services", "Background & Autostart", .normal),
+        "SCHEDULE_EXACT_ALARM": ("Exact alarms and schedules", "Background & Autostart", .special),
+        "USE_EXACT_ALARM": ("Exact alarms (calendar and alarm apps)", "Background & Autostart", .normal),
+        "REQUEST_IGNORE_BATTERY_OPTIMIZATIONS": ("Bypass battery optimisation (request)", "Background & Autostart", .normal),
+        "RUN_USER_INITIATED_JOBS": ("Background tasks started by the user", "Background & Autostart", .normal),
+        "POST_NOTIFICATIONS": ("Show notifications", "Notifications", .dangerous),
+        "VIBRATE": ("Vibration", "Notifications", .normal),
+        "ACCESS_NOTIFICATION_POLICY": ("Do Not Disturb settings", "Notifications", .normal),
+        "INTERNET": ("Internet access", "Network & Internet", .normal),
+        "ACCESS_NETWORK_STATE": ("Network status", "Network & Internet", .normal),
+        "ACCESS_WIFI_STATE": ("Wi-Fi status", "Network & Internet", .normal),
+        "CHANGE_WIFI_STATE": ("Turn Wi-Fi on and off", "Network & Internet", .normal),
+        "CHANGE_NETWORK_STATE": ("Change network connection", "Network & Internet", .normal),
+        "USE_BIOMETRIC": ("Biometric sign-in", "Hardware & Other", .normal),
+        "USE_FINGERPRINT": ("Fingerprint (deprecated)", "Hardware & Other", .normal),
+        "FLASHLIGHT": ("Flashlight", "Hardware & Other", .normal),
+        "TRANSMIT_IR": ("Send infrared", "Hardware & Other", .normal),
+        "SET_WALLPAPER": ("Set wallpaper", "Hardware & Other", .normal),
+        "READ_SYNC_SETTINGS": ("Read sync settings", "Hardware & Other", .normal),
+        "WRITE_SYNC_SETTINGS": ("Turn sync on and off", "Hardware & Other", .normal),
     ]
     private static let other: [String: Entry] = [
-        "com.google.android.gms.permission.AD_ID": ("Werbe-ID lesen", "Werbung & Tracking", .normal),
-        "com.google.android.finsky.permission.BIND_GET_INSTALL_REFERRER_SERVICE": ("Installationsquelle abfragen (Install Referrer)", "Werbung & Tracking", .normal),
-        "com.google.android.gms.permission.ACTIVITY_RECOGNITION": ("Körperliche Aktivität erkennen (Play-Dienste)", "Körper & Aktivität", .dangerous),
-        "com.android.vending.BILLING": ("In-App-Käufe (Google Play)", "Käufe & Lizenzen", .normal),
-        "com.android.vending.CHECK_LICENSE": ("Lizenzprüfung (Google Play)", "Käufe & Lizenzen", .normal),
-        "com.google.android.c2dm.permission.RECEIVE": ("Push-Nachrichten empfangen (Firebase)", "Push-Nachrichten", .normal),
-        "com.android.launcher.permission.INSTALL_SHORTCUT": ("Verknüpfungen auf dem Startbildschirm anlegen", "Hardware & Sonstiges", .normal),
-        "com.android.alarm.permission.SET_ALARM": ("Wecker stellen", "Hintergrund & Autostart", .normal),
+        "com.google.android.gms.permission.AD_ID": ("Read the advertising ID", "Advertising & Tracking", .normal),
+        "com.google.android.finsky.permission.BIND_GET_INSTALL_REFERRER_SERVICE": ("Query the install source (Install Referrer)", "Advertising & Tracking", .normal),
+        "com.google.android.gms.permission.ACTIVITY_RECOGNITION": ("Recognise physical activity (Play services)", "Body & Activity", .dangerous),
+        "com.android.vending.BILLING": ("In-app purchases (Google Play)", "Purchases & Licences", .normal),
+        "com.android.vending.CHECK_LICENSE": ("Licence check (Google Play)", "Purchases & Licences", .normal),
+        "com.google.android.c2dm.permission.RECEIVE": ("Receive push messages (Firebase)", "Push Messages", .normal),
+        "com.android.launcher.permission.INSTALL_SHORTCUT": ("Create home screen shortcuts", "Hardware & Other", .normal),
+        "com.android.alarm.permission.SET_ALARM": ("Set alarms", "Background & Autostart", .normal),
     ]
     private static let vendors: [(prefix: String, name: String)] = [
         ("com.samsung.", "Samsung"), ("com.sec.", "Samsung"), ("com.huawei.", "Huawei"), ("com.hihonor.", "Honor"), ("com.hihonor.", "Honor"),
@@ -149,28 +152,29 @@ public enum PermissionCatalog {
     ]
 
     public static func describe(_ name: String, ownPackage: String) -> PermissionInfo {
+        let known = { (entry: Entry) in PermissionInfo(name: name, label: profileText(entry.label), group: profileText(entry.group), level: entry.level) }
         if name.hasPrefix("android.permission.") {
             let short = String(name.dropFirst("android.permission.".count))
-            if let entry = android[short] { return PermissionInfo(name: name, label: entry.label, group: entry.group, level: entry.level) }
+            if let entry = android[short] { return known(entry) }
             if short.hasPrefix("FOREGROUND_SERVICE_") {
                 let kind = short.dropFirst("FOREGROUND_SERVICE_".count).lowercased().replacingOccurrences(of: "_", with: " ")
-                return PermissionInfo(name: name, label: "Hintergrunddienst: \(kind)", group: "Hintergrund & Autostart", level: .normal)
+                return PermissionInfo(name: name, label: String(localized: "Background service: \(kind)"), group: profileText("Background & Autostart"), level: .normal)
             }
-            return PermissionInfo(name: name, label: short.lowercased().replacingOccurrences(of: "_", with: " ").capitalized, group: "Sonstiges", level: .unknown)
+            return PermissionInfo(name: name, label: short.lowercased().replacingOccurrences(of: "_", with: " ").capitalized, group: profileText("Other"), level: .unknown)
         }
-        if let entry = other[name] { return PermissionInfo(name: name, label: entry.label, group: entry.group, level: entry.level) }
+        if let entry = other[name] { return known(entry) }
         if name.hasPrefix(ownPackage + ".") {
-            let label = name.hasSuffix(".DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION") ? "Interne Absicherung eigener Empfänger (automatisch)"
-                : name.hasSuffix(".C2D_MESSAGE") ? "Push-Nachrichten (App-intern, veraltet)" : "App-eigene Berechtigung"
-            return PermissionInfo(name: name, label: label, group: "App-intern", level: .appSpecific)
+            let label = name.hasSuffix(".DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION") ? String(localized: "Internal protection of own receivers (automatic)")
+                : name.hasSuffix(".C2D_MESSAGE") ? String(localized: "Push messages (app-internal, deprecated)") : String(localized: "App-defined permission")
+            return PermissionInfo(name: name, label: label, group: profileText("App-Internal"), level: .appSpecific)
         }
         if let vendor = vendors.first(where: { name.hasPrefix($0.prefix) }) {
             let lower = name.lowercased()
-            let topic = lower.contains("badge") ? "App-Symbol-Zähler" : (lower.contains("appmarket") || lower.contains("appgallery")) ? "App-Store-Daten"
-                : lower.contains("launcher") || lower.contains("shortcut") ? "Startbildschirm" : "Schnittstelle"
-            return PermissionInfo(name: name, label: "\(vendor.name): \(topic)", group: "Herstellerschnittstellen", level: .vendor)
+            let topic = lower.contains("badge") ? String(localized: "App icon badge") : (lower.contains("appmarket") || lower.contains("appgallery")) ? String(localized: "App store data")
+                : lower.contains("launcher") || lower.contains("shortcut") ? String(localized: "Home screen") : String(localized: "Interface")
+            return PermissionInfo(name: name, label: "\(vendor.name): \(topic)", group: profileText("Vendor Interfaces"), level: .vendor)
         }
-        return PermissionInfo(name: name, label: name.split(separator: ".").last.map(String.init) ?? name, group: "Sonstiges", level: .unknown)
+        return PermissionInfo(name: name, label: name.split(separator: ".").last.map(String.init) ?? name, group: profileText("Other"), level: .unknown)
     }
 }
 
@@ -179,15 +183,15 @@ public enum PermissionCatalog {
 public struct DetectedSDK: Hashable, Sendable, Identifiable {
     public let name: String
     public let category: String
-    /// Where it was found: Manifest, native Bibliothek, Bibliothekskennung, DEX.
+    /// Where it was found (localized): Java code, native library, library marker.
     public let sources: [String]
     public var id: String { name }
 }
 
 public enum SDKCatalog {
-    public static let categories = ["Werbung", "Analyse & Attribution", "Absturz- & Fehlerberichte", "Einwilligung & Datenschutz", "Login & Soziale Netzwerke",
-                                    "Zahlungen", "Push & Kommunikation", "Kundenservice", "Publisher & Spieledienste", "Schutz & Erkennung", "Google-Dienste", "Sonstiges"]
-    public static let trackingCategories: Set<String> = ["Werbung", "Analyse & Attribution"]
+    public static let categories = ["Advertising", "Analytics & Attribution", "Crash & Error Reports", "Consent & Privacy", "Login & Social Networks",
+                                    "Payments", "Push & Messaging", "Customer Support", "Publisher & Game Services", "Protection & Detection", "Google Services", "Other"].map(profileText)
+    public static let trackingCategories: Set<String> = Set(["Advertising", "Analytics & Attribution"].map(profileText))
 
     struct Rule {
         let name: String, category: String
@@ -195,91 +199,91 @@ public enum SDKCatalog {
     }
 
     static let rules: [Rule] = [
-        Rule(name: "Google AdMob", category: "Werbung", packages: ["com.google.android.gms.ads"], markers: ["play-services-ads"]),
-        Rule(name: "AppLovin", category: "Werbung", packages: ["com.applovin"], libraries: ["applovin"]),
-        Rule(name: "ironSource / LevelPlay", category: "Werbung", packages: ["com.ironsource", "com.unity3d.mediation"]),
-        Rule(name: "Unity Ads", category: "Werbung", packages: ["com.unity3d.ads", "com.unity3d.services"]),
-        Rule(name: "Meta Audience Network", category: "Werbung", packages: ["com.facebook.ads"]),
-        Rule(name: "Pangle (ByteDance)", category: "Werbung", packages: ["com.bytedance.sdk", "com.bytedance.pangle"], libraries: ["pglarmor", "_pgl", "apminsight", "tt_ugen"]),
-        Rule(name: "Mintegral", category: "Werbung", packages: ["com.mbridge", "com.mintegral"]),
-        Rule(name: "Vungle / Liftoff", category: "Werbung", packages: ["com.vungle", "com.liftoff"]),
-        Rule(name: "Chartboost", category: "Werbung", packages: ["com.chartboost"]),
-        Rule(name: "InMobi", category: "Werbung", packages: ["com.inmobi"]),
-        Rule(name: "Fyber / Digital Turbine", category: "Werbung", packages: ["com.fyber", "com.digitalturbine"]),
-        Rule(name: "Moloco", category: "Werbung", packages: ["com.moloco"]),
-        Rule(name: "Bigo Ads", category: "Werbung", packages: ["sg.bigo"]),
-        Rule(name: "BidMachine", category: "Werbung", packages: ["io.bidmachine"]),
-        Rule(name: "Verve / PubNative", category: "Werbung", packages: ["com.verve", "net.pubnative"]),
-        Rule(name: "Ogury", category: "Werbung", packages: ["com.ogury"]),
-        Rule(name: "Amazon Publisher Services", category: "Werbung", packages: ["com.amazon.device.ads", "com.amazon.aps"]),
-        Rule(name: "Tapjoy", category: "Werbung", packages: ["com.tapjoy"], libraries: ["tapjoy"]),
-        Rule(name: "AdColony", category: "Werbung", packages: ["com.adcolony"]),
-        Rule(name: "Yandex Ads", category: "Werbung", packages: ["com.yandex.mobile.ads"]),
-        Rule(name: "Smaato", category: "Werbung", packages: ["com.smaato"]),
-        Rule(name: "FIVE (LINE)", category: "Werbung", packages: ["com.five_corp"]),
-        Rule(name: "Start.io", category: "Werbung", packages: ["com.startapp"]),
-        Rule(name: "AppsFlyer", category: "Analyse & Attribution", packages: ["com.appsflyer"]),
-        Rule(name: "Adjust", category: "Analyse & Attribution", packages: ["com.adjust.sdk"]),
-        Rule(name: "Kochava", category: "Analyse & Attribution", packages: ["com.kochava"]),
-        Rule(name: "Branch", category: "Analyse & Attribution", packages: ["io.branch"]),
-        Rule(name: "Singular", category: "Analyse & Attribution", packages: ["com.singular"]),
-        Rule(name: "Google Analytics for Firebase", category: "Analyse & Attribution", packages: ["com.google.firebase.analytics", "com.google.android.gms.measurement"],
+        Rule(name: "Google AdMob", category: "Advertising", packages: ["com.google.android.gms.ads"], markers: ["play-services-ads"]),
+        Rule(name: "AppLovin", category: "Advertising", packages: ["com.applovin"], libraries: ["applovin"]),
+        Rule(name: "ironSource / LevelPlay", category: "Advertising", packages: ["com.ironsource", "com.unity3d.mediation"]),
+        Rule(name: "Unity Ads", category: "Advertising", packages: ["com.unity3d.ads", "com.unity3d.services"]),
+        Rule(name: "Meta Audience Network", category: "Advertising", packages: ["com.facebook.ads"]),
+        Rule(name: "Pangle (ByteDance)", category: "Advertising", packages: ["com.bytedance.sdk", "com.bytedance.pangle"], libraries: ["pglarmor", "_pgl", "apminsight", "tt_ugen"]),
+        Rule(name: "Mintegral", category: "Advertising", packages: ["com.mbridge", "com.mintegral"]),
+        Rule(name: "Vungle / Liftoff", category: "Advertising", packages: ["com.vungle", "com.liftoff"]),
+        Rule(name: "Chartboost", category: "Advertising", packages: ["com.chartboost"]),
+        Rule(name: "InMobi", category: "Advertising", packages: ["com.inmobi"]),
+        Rule(name: "Fyber / Digital Turbine", category: "Advertising", packages: ["com.fyber", "com.digitalturbine"]),
+        Rule(name: "Moloco", category: "Advertising", packages: ["com.moloco"]),
+        Rule(name: "Bigo Ads", category: "Advertising", packages: ["sg.bigo"]),
+        Rule(name: "BidMachine", category: "Advertising", packages: ["io.bidmachine"]),
+        Rule(name: "Verve / PubNative", category: "Advertising", packages: ["com.verve", "net.pubnative"]),
+        Rule(name: "Ogury", category: "Advertising", packages: ["com.ogury"]),
+        Rule(name: "Amazon Publisher Services", category: "Advertising", packages: ["com.amazon.device.ads", "com.amazon.aps"]),
+        Rule(name: "Tapjoy", category: "Advertising", packages: ["com.tapjoy"], libraries: ["tapjoy"]),
+        Rule(name: "AdColony", category: "Advertising", packages: ["com.adcolony"]),
+        Rule(name: "Yandex Ads", category: "Advertising", packages: ["com.yandex.mobile.ads"]),
+        Rule(name: "Smaato", category: "Advertising", packages: ["com.smaato"]),
+        Rule(name: "FIVE (LINE)", category: "Advertising", packages: ["com.five_corp"]),
+        Rule(name: "Start.io", category: "Advertising", packages: ["com.startapp"]),
+        Rule(name: "AppsFlyer", category: "Analytics & Attribution", packages: ["com.appsflyer"]),
+        Rule(name: "Adjust", category: "Analytics & Attribution", packages: ["com.adjust.sdk"]),
+        Rule(name: "Kochava", category: "Analytics & Attribution", packages: ["com.kochava"]),
+        Rule(name: "Branch", category: "Analytics & Attribution", packages: ["io.branch"]),
+        Rule(name: "Singular", category: "Analytics & Attribution", packages: ["com.singular"]),
+        Rule(name: "Google Analytics for Firebase", category: "Analytics & Attribution", packages: ["com.google.firebase.analytics", "com.google.android.gms.measurement"],
              libraries: ["FirebaseCppAnalytics"], markers: ["firebase-analytics", "play-services-measurement"]),
-        Rule(name: "Amplitude", category: "Analyse & Attribution", packages: ["com.amplitude"]),
-        Rule(name: "Mixpanel", category: "Analyse & Attribution", packages: ["com.mixpanel"]),
-        Rule(name: "Flurry", category: "Analyse & Attribution", packages: ["com.flurry"]),
-        Rule(name: "GameAnalytics", category: "Analyse & Attribution", packages: ["com.gameanalytics"]),
-        Rule(name: "Tenjin", category: "Analyse & Attribution", packages: ["com.tenjin"]),
-        Rule(name: "AppMetrica (Yandex)", category: "Analyse & Attribution", packages: ["com.yandex.metrica", "io.appmetrica"]),
-        Rule(name: "Huawei Analytics", category: "Analyse & Attribution", packages: ["com.huawei.hms.analytics"]),
-        Rule(name: "Firebase Crashlytics", category: "Absturz- & Fehlerberichte", packages: ["com.google.firebase.crashlytics"], libraries: ["crashlytics"], markers: ["firebase-crashlytics"]),
-        Rule(name: "Sentry", category: "Absturz- & Fehlerberichte", packages: ["io.sentry"], libraries: ["sentry"]),
-        Rule(name: "Bugsnag", category: "Absturz- & Fehlerberichte", packages: ["com.bugsnag"]),
-        Rule(name: "Microsoft App Center", category: "Absturz- & Fehlerberichte", packages: ["com.microsoft.appcenter"]),
-        Rule(name: "Instabug", category: "Absturz- & Fehlerberichte", packages: ["com.instabug"]),
-        Rule(name: "Google UMP (Einwilligung)", category: "Einwilligung & Datenschutz", packages: ["com.google.android.ump"], markers: ["user-messaging-platform"]),
-        Rule(name: "OneTrust", category: "Einwilligung & Datenschutz", packages: ["com.onetrust"]),
-        Rule(name: "Usercentrics", category: "Einwilligung & Datenschutz", packages: ["com.usercentrics"]),
-        Rule(name: "Didomi", category: "Einwilligung & Datenschutz", packages: ["io.didomi"]),
-        Rule(name: "Google-Anmeldung", category: "Login & Soziale Netzwerke", packages: ["com.google.android.gms.auth"], markers: ["play-services-auth"]),
-        Rule(name: "Facebook-SDK (Login, Teilen, App Events)", category: "Login & Soziale Netzwerke", packages: ["com.facebook"], excluding: ["com.facebook.ads", "com.facebook.react"]),
-        Rule(name: "X / Twitter", category: "Login & Soziale Netzwerke", packages: ["com.twitter.sdk"]),
-        Rule(name: "LINE", category: "Login & Soziale Netzwerke", packages: ["com.linecorp"]),
-        Rule(name: "VK", category: "Login & Soziale Netzwerke", packages: ["com.vk.api", "com.vk.sdk"]),
-        Rule(name: "WeChat", category: "Login & Soziale Netzwerke", packages: ["com.tencent.mm.opensdk"]),
-        Rule(name: "Google Play Billing", category: "Zahlungen", packages: ["com.android.billingclient"], markers: ["billing"]),
-        Rule(name: "Huawei In-App-Käufe", category: "Zahlungen", packages: ["com.huawei.hms.iap"]),
-        Rule(name: "Stripe", category: "Zahlungen", packages: ["com.stripe"]),
-        Rule(name: "PayPal", category: "Zahlungen", packages: ["com.paypal"]),
-        Rule(name: "Xsolla", category: "Zahlungen", packages: ["com.xsolla"]),
-        Rule(name: "Firebase Cloud Messaging", category: "Push & Kommunikation", packages: ["com.google.firebase.messaging"],
+        Rule(name: "Amplitude", category: "Analytics & Attribution", packages: ["com.amplitude"]),
+        Rule(name: "Mixpanel", category: "Analytics & Attribution", packages: ["com.mixpanel"]),
+        Rule(name: "Flurry", category: "Analytics & Attribution", packages: ["com.flurry"]),
+        Rule(name: "GameAnalytics", category: "Analytics & Attribution", packages: ["com.gameanalytics"]),
+        Rule(name: "Tenjin", category: "Analytics & Attribution", packages: ["com.tenjin"]),
+        Rule(name: "AppMetrica (Yandex)", category: "Analytics & Attribution", packages: ["com.yandex.metrica", "io.appmetrica"]),
+        Rule(name: "Huawei Analytics", category: "Analytics & Attribution", packages: ["com.huawei.hms.analytics"]),
+        Rule(name: "Firebase Crashlytics", category: "Crash & Error Reports", packages: ["com.google.firebase.crashlytics"], libraries: ["crashlytics"], markers: ["firebase-crashlytics"]),
+        Rule(name: "Sentry", category: "Crash & Error Reports", packages: ["io.sentry"], libraries: ["sentry"]),
+        Rule(name: "Bugsnag", category: "Crash & Error Reports", packages: ["com.bugsnag"]),
+        Rule(name: "Microsoft App Center", category: "Crash & Error Reports", packages: ["com.microsoft.appcenter"]),
+        Rule(name: "Instabug", category: "Crash & Error Reports", packages: ["com.instabug"]),
+        Rule(name: "Google UMP (Consent)", category: "Consent & Privacy", packages: ["com.google.android.ump"], markers: ["user-messaging-platform"]),
+        Rule(name: "OneTrust", category: "Consent & Privacy", packages: ["com.onetrust"]),
+        Rule(name: "Usercentrics", category: "Consent & Privacy", packages: ["com.usercentrics"]),
+        Rule(name: "Didomi", category: "Consent & Privacy", packages: ["io.didomi"]),
+        Rule(name: "Google Sign-In", category: "Login & Social Networks", packages: ["com.google.android.gms.auth"], markers: ["play-services-auth"]),
+        Rule(name: "Facebook SDK (Login, Sharing, App Events)", category: "Login & Social Networks", packages: ["com.facebook"], excluding: ["com.facebook.ads", "com.facebook.react"]),
+        Rule(name: "X / Twitter", category: "Login & Social Networks", packages: ["com.twitter.sdk"]),
+        Rule(name: "LINE", category: "Login & Social Networks", packages: ["com.linecorp"]),
+        Rule(name: "VK", category: "Login & Social Networks", packages: ["com.vk.api", "com.vk.sdk"]),
+        Rule(name: "WeChat", category: "Login & Social Networks", packages: ["com.tencent.mm.opensdk"]),
+        Rule(name: "Google Play Billing", category: "Payments", packages: ["com.android.billingclient"], markers: ["billing"]),
+        Rule(name: "Huawei In-App Purchases", category: "Payments", packages: ["com.huawei.hms.iap"]),
+        Rule(name: "Stripe", category: "Payments", packages: ["com.stripe"]),
+        Rule(name: "PayPal", category: "Payments", packages: ["com.paypal"]),
+        Rule(name: "Xsolla", category: "Payments", packages: ["com.xsolla"]),
+        Rule(name: "Firebase Cloud Messaging", category: "Push & Messaging", packages: ["com.google.firebase.messaging"],
              libraries: ["FirebaseCppMessaging"], markers: ["firebase-messaging", "play-services-cloud-messaging"]),
-        Rule(name: "OneSignal", category: "Push & Kommunikation", packages: ["com.onesignal"]),
-        Rule(name: "Huawei Push", category: "Push & Kommunikation", packages: ["com.huawei.hms.push"]),
-        Rule(name: "Airship", category: "Push & Kommunikation", packages: ["com.urbanairship"]),
-        Rule(name: "Braze", category: "Push & Kommunikation", packages: ["com.braze", "com.appboy"]),
-        Rule(name: "CleverTap", category: "Push & Kommunikation", packages: ["com.clevertap"]),
-        Rule(name: "Helpshift", category: "Kundenservice", packages: ["com.helpshift"]),
-        Rule(name: "Zendesk", category: "Kundenservice", packages: ["zendesk.", "com.zendesk"]),
-        Rule(name: "Intercom", category: "Kundenservice", packages: ["io.intercom"]),
-        Rule(name: "SayKit (SayGames)", category: "Publisher & Spieledienste", packages: ["saygames", "by.saygames"]),
-        Rule(name: "YSO Corp", category: "Publisher & Spieledienste", packages: ["com.ysocorp"]),
-        Rule(name: "Google Play Spiele", category: "Publisher & Spieledienste", packages: ["com.google.android.gms.games"], markers: ["play-services-games-v2", "play-services-games"]),
-        Rule(name: "Play Integrity (Echtheitsprüfung)", category: "Schutz & Erkennung", packages: ["com.google.android.play.core.integrity"], markers: ["integrity"]),
-        Rule(name: "Emulator-Erkennung", category: "Schutz & Erkennung", libraries: ["emulator_check"]),
-        Rule(name: "Tencent ACE (Anti-Cheat)", category: "Schutz & Erkennung", libraries: ["anogs", "tersafe"]),
-        Rule(name: "NetEase-Schutz", category: "Schutz & Erkennung", libraries: ["NetHTProtect"]),
-        Rule(name: "Jiagu (Code-Verschleierung)", category: "Schutz & Erkennung", libraries: ["jiagu"]),
-        Rule(name: "Bangcle (Code-Verschleierung)", category: "Schutz & Erkennung", libraries: ["DexHelper", "secexe"]),
-        Rule(name: "Google-Standortdienste", category: "Google-Dienste", packages: ["com.google.android.gms.location"], markers: ["play-services-location"]),
-        Rule(name: "Google Nearby", category: "Google-Dienste", packages: ["com.google.android.gms.nearby"], markers: ["play-services-nearby"]),
-        Rule(name: "Play In-App-Updates", category: "Google-Dienste", markers: ["app-update"]),
-        Rule(name: "Play In-App-Bewertung", category: "Google-Dienste", markers: ["review"]),
-        Rule(name: "Google ML Kit (Übersetzung, Spracherkennung)", category: "Google-Dienste", libraries: ["translate_jni", "language_id"], markers: ["translate", "language-id"]),
-        Rule(name: "TensorFlow Lite (maschinelles Lernen)", category: "Sonstiges", libraries: ["tensorflowlite"], markers: ["play-services-tflite-java"]),
-        Rule(name: "Cronet (Chrome-Netzwerkstack)", category: "Sonstiges", libraries: ["cronet"], markers: ["play-services-cronet", "cronet-okhttp"]),
-        Rule(name: "xLua (Lua-Skripting)", category: "Sonstiges", libraries: ["xlua"]),
-        Rule(name: "AVPro Video", category: "Sonstiges", libraries: ["AVProVideo"]),
+        Rule(name: "OneSignal", category: "Push & Messaging", packages: ["com.onesignal"]),
+        Rule(name: "Huawei Push", category: "Push & Messaging", packages: ["com.huawei.hms.push"]),
+        Rule(name: "Airship", category: "Push & Messaging", packages: ["com.urbanairship"]),
+        Rule(name: "Braze", category: "Push & Messaging", packages: ["com.braze", "com.appboy"]),
+        Rule(name: "CleverTap", category: "Push & Messaging", packages: ["com.clevertap"]),
+        Rule(name: "Helpshift", category: "Customer Support", packages: ["com.helpshift"]),
+        Rule(name: "Zendesk", category: "Customer Support", packages: ["zendesk.", "com.zendesk"]),
+        Rule(name: "Intercom", category: "Customer Support", packages: ["io.intercom"]),
+        Rule(name: "SayKit (SayGames)", category: "Publisher & Game Services", packages: ["saygames", "by.saygames"]),
+        Rule(name: "YSO Corp", category: "Publisher & Game Services", packages: ["com.ysocorp"]),
+        Rule(name: "Google Play Games", category: "Publisher & Game Services", packages: ["com.google.android.gms.games"], markers: ["play-services-games-v2", "play-services-games"]),
+        Rule(name: "Play Integrity (Authenticity Check)", category: "Protection & Detection", packages: ["com.google.android.play.core.integrity"], markers: ["integrity"]),
+        Rule(name: "Emulator Detection", category: "Protection & Detection", libraries: ["emulator_check"]),
+        Rule(name: "Tencent ACE (Anti-Cheat)", category: "Protection & Detection", libraries: ["anogs", "tersafe"]),
+        Rule(name: "NetEase Protection", category: "Protection & Detection", libraries: ["NetHTProtect"]),
+        Rule(name: "Jiagu (Code Obfuscation)", category: "Protection & Detection", libraries: ["jiagu"]),
+        Rule(name: "Bangcle (Code Obfuscation)", category: "Protection & Detection", libraries: ["DexHelper", "secexe"]),
+        Rule(name: "Google Location Services", category: "Google Services", packages: ["com.google.android.gms.location"], markers: ["play-services-location"]),
+        Rule(name: "Google Nearby", category: "Google Services", packages: ["com.google.android.gms.nearby"], markers: ["play-services-nearby"]),
+        Rule(name: "Play In-App Updates", category: "Google Services", markers: ["app-update"]),
+        Rule(name: "Play In-App Review", category: "Google Services", markers: ["review"]),
+        Rule(name: "Google ML Kit (Translation, Language ID)", category: "Google Services", libraries: ["translate_jni", "language_id"], markers: ["translate", "language-id"]),
+        Rule(name: "TensorFlow Lite (Machine Learning)", category: "Other", libraries: ["tensorflowlite"], markers: ["play-services-tflite-java"]),
+        Rule(name: "Cronet (Chrome Network Stack)", category: "Other", libraries: ["cronet"], markers: ["play-services-cronet", "cronet-okhttp"]),
+        Rule(name: "xLua (Lua Scripting)", category: "Other", libraries: ["xlua"]),
+        Rule(name: "AVPro Video", category: "Other", libraries: ["AVProVideo"]),
     ]
 
     /// `classes`: Java class or package names (manifest components, DEX inventory); `libraries`: native `.so` file names; `markers`: library marker files without extension.
@@ -290,10 +294,10 @@ public enum SDKCatalog {
                 rule.packages.contains { prefix in name == prefix || name.hasPrefix(prefix.hasSuffix(".") ? prefix : prefix + ".") }
                     && !rule.excluding.contains { name == $0 || name.hasPrefix($0 + ".") }
             }
-            if packageHit { sources.append("Java-Code") }
-            if libraries.contains(where: { library in rule.libraries.contains { library.localizedCaseInsensitiveContains($0) } }) { sources.append("native Bibliothek") }
-            if markers.contains(where: { rule.markers.contains($0) }) { sources.append("Bibliothekskennung") }
-            return sources.isEmpty ? nil : DetectedSDK(name: rule.name, category: rule.category, sources: sources)
+            if packageHit { sources.append(String(localized: "Java code")) }
+            if libraries.contains(where: { library in rule.libraries.contains { library.localizedCaseInsensitiveContains($0) } }) { sources.append(String(localized: "native library")) }
+            if markers.contains(where: { rule.markers.contains($0) }) { sources.append(String(localized: "library marker")) }
+            return sources.isEmpty ? nil : DetectedSDK(name: profileText(rule.name), category: profileText(rule.category), sources: sources)
         }
     }
 
@@ -316,10 +320,23 @@ public enum SDKCatalog {
 // MARK: Profile
 
 public struct ReachableEntry: Hashable, Sendable {
+    /// "screens", "services", "receivers" or "providers".
     public let kind: String
     public let count: Int
-    /// "1 Bildschirm", "4 Bildschirme".
-    public var title: String { "\(count) \(count == 1 ? ["Bildschirme": "Bildschirm", "Dienste": "Dienst"][kind] ?? kind : kind)" }
+    /// "1 screen", "4 screens".
+    public var title: String {
+        switch (kind, count == 1) {
+        case ("screens", true): String(localized: "1 screen")
+        case ("screens", false): String(localized: "\(count) screens")
+        case ("services", true): String(localized: "1 service")
+        case ("services", false): String(localized: "\(count) services")
+        case ("receivers", true): String(localized: "1 receiver")
+        case ("receivers", false): String(localized: "\(count) receivers")
+        case ("providers", true): String(localized: "1 data provider")
+        case ("providers", false): String(localized: "\(count) data providers")
+        default: "\(count) \(kind)"
+        }
+    }
 }
 
 public struct AppProfile: Sendable {
@@ -368,19 +385,20 @@ public struct AppProfile: Sendable {
     public var highlights: [(text: String, notable: Bool)] {
         var result: [(String, Bool)] = []
         let names = Set(permissions.map(\.name))
-        if !trackingSDKs.isEmpty { result.append(("\(trackingSDKs.count) Werbe- und Tracking-Bibliothek\(trackingSDKs.count == 1 ? "" : "en")", true)) }
-        if names.contains("com.google.android.gms.permission.AD_ID") || names.contains("android.permission.ACCESS_ADSERVICES_AD_ID") { result.append(("Liest die Werbe-ID", true)) }
+        let tracking = trackingSDKs.count
+        if tracking > 0 { result.append((tracking == 1 ? String(localized: "1 advertising or tracking library") : String(localized: "\(tracking) advertising and tracking libraries"), true)) }
+        if names.contains("com.google.android.gms.permission.AD_ID") || names.contains("android.permission.ACCESS_ADSERVICES_AD_ID") { result.append((String(localized: "Reads the advertising ID"), true)) }
         let dangerous = permissions.filter { $0.level == .dangerous }.count
-        if dangerous > 0 { result.append(("\(dangerous) Berechtigung\(dangerous == 1 ? "" : "en") mit Freigabe", dangerous >= 5)) }
+        if dangerous > 0 { result.append((dangerous == 1 ? String(localized: "1 permission needing approval") : String(localized: "\(dangerous) permissions needing approval"), dangerous >= 5)) }
         for special in permissions where special.level == .special { result.append((special.label, true)) }
-        if names.contains("android.permission.RECEIVE_BOOT_COMPLETED") { result.append(("Startet beim Hochfahren", false)) }
-        if cleartextTraffic { result.append(("Erlaubt unverschlüsseltes HTTP", true)) }
-        if debuggable { result.append(("Debug-Build", true)) }
-        if allowBackup { result.append(("App-Daten in Android-Backups", false)) }
-        if sdks.contains(where: { $0.name == "Emulator-Erkennung" }) { result.append(("Bibliothek zur Emulator-Erkennung", true)) }
-        if sdks.contains(where: { $0.name.hasPrefix("xLua") }) { result.append(("Enthält Lua-Skripting (xLua)", true)) }
+        if names.contains("android.permission.RECEIVE_BOOT_COMPLETED") { result.append((String(localized: "Starts at boot"), false)) }
+        if cleartextTraffic { result.append((String(localized: "Allows unencrypted HTTP"), true)) }
+        if debuggable { result.append((String(localized: "Debug build"), true)) }
+        if allowBackup { result.append((String(localized: "App data in Android backups"), false)) }
+        if sdks.contains(where: { $0.name == profileText("Emulator Detection") }) { result.append((String(localized: "Emulator detection library"), true)) }
+        if sdks.contains(where: { $0.name.hasPrefix("xLua") }) { result.append((String(localized: "Contains Lua scripting (xLua)"), true)) }
         let systemOnly = permissions.filter { $0.level == .systemOnly }.count
-        if systemOnly > 0 { result.append(("\(systemOnly) Systemberechtigung\(systemOnly == 1 ? "" : "en") ohne Wirkung", false)) }
+        if systemOnly > 0 { result.append((systemOnly == 1 ? String(localized: "1 system permission without effect") : String(localized: "\(systemOnly) system permissions without effect"), false)) }
         return result
     }
 
@@ -428,14 +446,14 @@ public struct AppProfile: Sendable {
 
     /// Components other apps can start: explicitly exported, or older manifests with an intent filter and no `exported` value. Providers default to private.
     static func reachable(_ components: [ManifestComponent]) -> [ReachableEntry] {
-        let titles = [("activity", "Bildschirme"), ("activity-alias", "Bildschirme"), ("service", "Dienste"), ("receiver", "Empfänger"), ("provider", "Datenanbieter")]
+        let titles = [("activity", "screens"), ("activity-alias", "screens"), ("service", "services"), ("receiver", "receivers"), ("provider", "providers")]
         var counts: [String: Int] = [:]
         for component in components {
             let open = component.exported == "true" || (component.exported == nil && component.kind != "provider" && !component.actions.isEmpty)
             guard open, component.enabled != "false", let title = titles.first(where: { $0.0 == component.kind })?.1 else { continue }
             counts[title, default: 0] += 1
         }
-        return ["Bildschirme", "Dienste", "Empfänger", "Datenanbieter"].compactMap { kind in counts[kind].map { ReachableEntry(kind: kind, count: $0) } }
+        return ["screens", "services", "receivers", "providers"].compactMap { kind in counts[kind].map { ReachableEntry(kind: kind, count: $0) } }
     }
 }
 

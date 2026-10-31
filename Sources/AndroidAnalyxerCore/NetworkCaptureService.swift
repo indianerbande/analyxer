@@ -12,7 +12,7 @@ public struct NetworkCaptureMetadata: Codable, Sendable {
     public let scope: String
     public let limitations: [String]
     public var reportText: String {
-        "Netzwerkmitschnitt (PCAP)\nGerät: \(serial)\nBoot-ID: \(bootID)\nStart: \(startedAt.ISO8601Format())\nEnde: \(endedAt.ISO8601Format())\nGewünschte Dauer: \(requestedDuration) s\nPakete: \(packetCount)\nBytes: \(byteCount)\nUmfang: \(scope)\n\n" + limitations.map { "• " + $0 }.joined(separator: "\n") + "\n"
+        "Network capture (PCAP)\nDevice: \(serial)\nBoot ID: \(bootID)\nStart: \(startedAt.ISO8601Format())\nEnd: \(endedAt.ISO8601Format())\nRequested duration: \(requestedDuration) s\nPackets: \(packetCount)\nBytes: \(byteCount)\nScope: \(scope)\n\n" + limitations.map { "• " + $0 }.joined(separator: "\n") + "\n"
     }
 }
 
@@ -25,7 +25,7 @@ private actor CaptureLeases {
     static let shared = CaptureLeases()
     var serials: Set<String> = []
     func acquire(_ serial: String) throws {
-        guard serials.insert(serial).inserted else { throw AndroidAnalyxerError.failed("Für dieses Gerät läuft bereits ein Mitschnitt in dieser Anwendung.") }
+        guard serials.insert(serial).inserted else { throw AndroidAnalyxerError.failed(String(localized: "A capture is already running for this device in this app.")) }
     }
     func release(_ serial: String) { serials.remove(serial) }
 }
@@ -36,7 +36,7 @@ extension EmulatorService {
     public func captureNetwork(serial: String, duration: TimeInterval = 10) async throws -> NetworkCapture {
         guard serial.range(of: #"^emulator-[0-9]+$"#, options: .regularExpression) != nil,
               duration.isFinite, (1...60).contains(duration) else {
-            throw AndroidAnalyxerError.invalidInput("Netzwerkmitschnitt benötigt einen SDK-Emulator und eine Dauer von 1 bis 60 Sekunden.")
+            throw AndroidAnalyxerError.invalidInput(String(localized: "Network capture needs an SDK emulator and a duration of 1 to 60 seconds."))
         }
         try await CaptureLeases.shared.acquire(serial)
         do {
@@ -54,17 +54,17 @@ extension EmulatorService {
         let location = try await captureConsole(serial: serial, arguments: ["avd", "path"])
         let lines = location.text.components(separatedBy: .newlines).map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty && $0 != "OK" }
         guard lines.count == 1, lines[0].hasPrefix("/") else {
-            throw AndroidAnalyxerError.failed("Der lokale AVD-Pfad konnte nicht eindeutig ermittelt werden.")
+            throw AndroidAnalyxerError.failed(String(localized: "The local AVD path could not be determined unambiguously."))
         }
         let avd = URL(fileURLWithPath: lines[0], isDirectory: true).standardizedFileURL
         let folder = avd.appendingPathComponent("console_out", isDirectory: true)
         guard avd.resolvingSymlinksInPath().path == avd.path,
               folder.resolvingSymlinksInPath().path == folder.path else {
-            throw AndroidAnalyxerError.failed("Der AVD-Ausgabepfad enthält einen symbolischen Link.")
+            throw AndroidAnalyxerError.failed(String(localized: "The AVD output path contains a symbolic link."))
         }
         if FileManager.default.fileExists(atPath: folder.path) {
             guard (try folder.resourceValues(forKeys: [.isDirectoryKey])).isDirectory == true else {
-                throw AndroidAnalyxerError.failed("Der AVD-Ausgabepfad ist kein Verzeichnis.")
+                throw AndroidAnalyxerError.failed(String(localized: "The AVD output path is not a folder."))
             }
         } else {
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
@@ -74,7 +74,7 @@ extension EmulatorService {
         // SDK 37 only accepts a bare name and writes under AVD/console_out. Reserve
         // our unique file privately; the SDK's truncating open preserves this mode.
         let fd = Darwin.open(file.path, O_CREAT | O_EXCL | O_WRONLY | O_NOFOLLOW, 0o600)
-        guard fd >= 0 else { throw AndroidAnalyxerError.failed("Die private PCAP-Datei konnte nicht angelegt werden.") }
+        guard fd >= 0 else { throw AndroidAnalyxerError.failed(String(localized: "The private PCAP file could not be created.")) }
         Darwin.close(fd)
         defer { try? FileManager.default.removeItem(at: file) }
         var started = false
@@ -88,13 +88,13 @@ extension EmulatorService {
             repeat {
                 try Task.checkCancellation()
                 let info = try file.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey, .isSymbolicLinkKey])
-                guard info.isRegularFile == true, info.isSymbolicLink != true else { throw AndroidAnalyxerError.failed("Ungültige PCAP-Ausgabedatei.") }
+                guard info.isRegularFile == true, info.isSymbolicLink != true else { throw AndroidAnalyxerError.failed(String(localized: "Invalid PCAP output file.")) }
                 guard (info.fileSize ?? 0) <= 32 * 1024 * 1024 else { throw AndroidAnalyxerError.outputTooLarge }
                 try await Task.sleep(nanoseconds: 100_000_000)
             } while ProcessInfo.processInfo.systemUptime < deadline
             guard try await bootIdentity(serial: serial) == bootID else {
                 started = false // Never send stop to a new guest reusing the serial.
-                throw AndroidAnalyxerError.failed("Das Gerät wurde während des Mitschnitts neu gestartet. Der Mitschnitt wird verworfen.")
+                throw AndroidAnalyxerError.failed(String(localized: "The device restarted during the capture. The capture is discarded."))
             }
             _ = try await captureConsole(serial: serial, arguments: ["network", "capture", "stop"])
             started = false
@@ -107,13 +107,13 @@ extension EmulatorService {
             let count = try PCAPValidation.packetCount(data)
             let metadata = NetworkCaptureMetadata(startedAt: began, endedAt: ended, serial: serial, bootID: bootID,
                 requestedDuration: duration, packetCount: count, byteCount: data.count,
-                scope: "Geräteweiter Legacy-WAN/Cellular-Mitschnitt über die Emulator-Konsole (QEMU/slirp)",
-                limitations: ["Modernes netsim-WLAN (Emulator ab 36.5) wird von dieser Konsole nicht erfasst.",
-                    "Keine Zuordnung einzelner Pakete zur Projekt-App; andere Apps und Systemdienste können enthalten sein.",
-                    "TLS-Inhalte werden hier nicht entschlüsselt. Prozessinstrumentierung ist eine separate Analysequelle.",
-                    "Ein leerer Mitschnitt ist kein Nachweis fehlender Netzwerkkommunikation.",
-                    "Der Konsolenbefehl ersetzt einen eventuell extern gestarteten Konsolenmitschnitt.",
-                    "Dauer maximal 60 Sekunden; Größenprüfung alle 100 ms, maximal 32 MiB werden übernommen. Kurzzeitiges Wachstum darüber führt zum Verwerfen."])
+                scope: "Device-wide legacy WAN/cellular capture via the emulator console (QEMU/slirp)",
+                limitations: ["Modern netsim Wi-Fi (emulator 36.5 and later) is not captured by this console.",
+                    "Packets are not attributed to the project app; other apps and system services may be included.",
+                    "TLS content is not decrypted here. Process instrumentation is a separate analysis source.",
+                    "An empty capture does not prove the absence of network traffic.",
+                    "The console command replaces a console capture that may have been started elsewhere.",
+                    "At most 60 seconds; size checked every 100 ms, at most 32 MiB kept. Brief growth beyond that discards the capture."])
             return NetworkCapture(pcap: data, metadata: metadata)
         } catch {
             // ADB may time out or be cancelled after the console already opened
@@ -124,12 +124,12 @@ extension EmulatorService {
                 // boot in the detached cleanup before addressing this serial again.
                 let cleanupError = await Task.detached { () -> String? in
                     do {
-                        guard try await bootIdentity(serial: serial) == bootID else { return "Bootidentität geändert; kein Stop an das ersetzte Gerät gesendet." }
+                        guard try await bootIdentity(serial: serial) == bootID else { return String(localized: "Boot identity changed; no stop was sent to the replaced device.") }
                         _ = try await captureConsole(serial: serial, arguments: ["network", "capture", "stop"])
                         return nil
                     } catch { return error.localizedDescription }
                 }.value
-                if let cleanupError { throw AndroidAnalyxerError.failed("\(error.localizedDescription)\nMitschnitt konnte nicht bestätigt beendet werden: \(cleanupError)") }
+                if let cleanupError { throw AndroidAnalyxerError.failed(String(localized: "\(error.localizedDescription)\nThe capture could not be confirmed as stopped: \(cleanupError)")) }
             }
             throw error
         }
@@ -139,7 +139,7 @@ extension EmulatorService {
         let result = try await adb(serial: serial, arguments: ["emu"] + arguments, timeout: 5)
         let lines = result.text.components(separatedBy: .newlines).map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
         guard !result.truncated, !lines.contains(where: { $0.hasPrefix("KO:") }), lines.contains("OK") else {
-            throw AndroidAnalyxerError.failed("Emulator-Konsole bestätigt den Mitschnittbefehl nicht: \(result.text.prefix(1000))")
+            throw AndroidAnalyxerError.failed(String(localized: "The emulator console did not confirm the capture command: \(String(result.text.prefix(1000)))"))
         }
         return result
     }
@@ -147,28 +147,28 @@ extension EmulatorService {
 
 enum PCAPValidation {
     static func packetCount(_ data: Data) throws -> Int {
-        guard data.count >= 24 else { throw AndroidAnalyxerError.failed("Der Emulator lieferte keinen vollständigen PCAP-Kopf.") }
+        guard data.count >= 24 else { throw AndroidAnalyxerError.failed(String(localized: "The emulator did not deliver a complete PCAP header.")) }
         let bytes = [UInt8](data)
         let magic = Array(bytes.prefix(4))
         let little: Bool
         switch magic {
         case [0xd4, 0xc3, 0xb2, 0xa1], [0x4d, 0x3c, 0xb2, 0xa1]: little = true
         case [0xa1, 0xb2, 0xc3, 0xd4], [0xa1, 0xb2, 0x3c, 0x4d]: little = false
-        default: throw AndroidAnalyxerError.failed("Unbekanntes PCAP-Format.")
+        default: throw AndroidAnalyxerError.failed(String(localized: "Unknown PCAP format."))
         }
         func word(_ offset: Int) -> UInt32 {
             let values = Array(bytes[offset..<(offset + 4)])
             return (little ? Array(values.reversed()) : values).reduce(UInt32(0)) { ($0 << 8) | UInt32($1) }
         }
         let major = little ? Int(bytes[4]) | Int(bytes[5]) << 8 : Int(bytes[4]) << 8 | Int(bytes[5])
-        guard major == 2 else { throw AndroidAnalyxerError.failed("Nicht unterstützte PCAP-Version.") }
+        guard major == 2 else { throw AndroidAnalyxerError.failed(String(localized: "Unsupported PCAP version.")) }
         let snaplen = word(16)
         var offset = 24, count = 0
         while offset < bytes.count {
-            guard bytes.count - offset >= 16 else { throw AndroidAnalyxerError.failed("Abgeschnittener PCAP-Paketkopf.") }
+            guard bytes.count - offset >= 16 else { throw AndroidAnalyxerError.failed(String(localized: "Truncated PCAP packet header.")) }
             let size = Int(word(offset + 8))
             guard size <= Int(snaplen), size <= Int(word(offset + 12)), size <= bytes.count - offset - 16 else {
-                throw AndroidAnalyxerError.failed("Abgeschnittene oder ungültige PCAP-Paketdaten.")
+                throw AndroidAnalyxerError.failed(String(localized: "Truncated or invalid PCAP packet data."))
             }
             offset += 16 + size; count += 1
         }
@@ -192,13 +192,13 @@ public struct PCAPReport: Codable, Sendable {
     public let endpoints: [NetworkEndpointCount]
     public let omittedEndpointPackets: Int
     public var reportText: String {
-        var lines = ["PCAP-Endpunktübersicht", "Pakete: \(packetCount) · Bytes: \(byteCount) · Linktyp: \(linkType)",
-                     "IP-Pakete mit lesbaren Endpunkten: \(decodedPackets)",
-                     "Geräte-/App-Zuordnung und Aufnahmeumfang müssen aus der Herkunft des Mitschnitts bestimmt werden.",
-                     "Keine TLS-Entschlüsselung, keine Nutzdatenanzeige, keine Rekonstruktion von Streams oder DNS-Namen.",
-                     "Unterstützt: klassisches PCAP, Ethernet (bis zwei VLAN-Tags), Linux cooked v1/v2, Raw IPv4/IPv6. IPv6-Erweiterungsheader und fragmentierte Pakete werden nur eingeschränkt ausgewertet.",
-                     "Maximal 1.000 unterschiedliche gerichtete Endpunktpaare; darüber ausgelassene Pakete: \(omittedEndpointPackets)", ""]
-        lines += endpoints.map { "\($0.transport) \($0.source) → \($0.destination) · \($0.packets) Pakete · \($0.capturedBytes) aufgezeichnete Frame-Bytes" }
+        var lines = ["PCAP endpoint summary", "Packets: \(packetCount) · Bytes: \(byteCount) · Link type: \(linkType)",
+                     "IP packets with readable endpoints: \(decodedPackets)",
+                     "Device/app attribution and capture scope must be determined from where the capture came from.",
+                     "No TLS decryption, no payload display, no reconstruction of streams or DNS names.",
+                     "Supported: classic PCAP, Ethernet (up to two VLAN tags), Linux cooked v1/v2, raw IPv4/IPv6. IPv6 extension headers and fragmented packets are only partly evaluated.",
+                     "At most 1,000 distinct directed endpoint pairs; packets omitted beyond that: \(omittedEndpointPackets)", ""]
+        lines += endpoints.map { "\($0.transport) \($0.source) → \($0.destination) · \($0.packets) packets · \($0.capturedBytes) captured frame bytes" }
         return lines.joined(separator: "\n") + "\n"
     }
 }

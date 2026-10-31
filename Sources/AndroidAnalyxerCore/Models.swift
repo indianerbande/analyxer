@@ -19,7 +19,7 @@ public struct AVDSystemInfo: Hashable, Sendable {
     public var androidVersion: String? { Self.androidVersions[String(api.prefix { $0 != "." })] }
     public var summary: String {
         let architecture = abi.map { ["arm64-v8a": "ARM64", "x86_64": "x86_64", "armeabi-v7a": "ARMv7", "x86": "x86"][$0] ?? $0 }
-        return [androidVersion.map { "Android " + $0 }, "API " + api, variant, pageSize16K ? "16-KB-Seiten" : nil, architecture].compactMap { $0 }.joined(separator: " · ")
+        return [androidVersion.map { "Android " + $0 }, "API " + api, variant, pageSize16K ? String(localized: "16 KB pages") : nil, architecture].compactMap { $0 }.joined(separator: " · ")
     }
 
     public static func read(name: String, catalogue: URL) -> AVDSystemInfo? {
@@ -67,11 +67,11 @@ public enum AndroidAnalyxerError: LocalizedError {
     case missingTool(String), invalidInput(String), failed(String), timedOut, cancelled, outputTooLarge
     public var errorDescription: String? {
         switch self {
-        case .missingTool(let name): return "Android-SDK-Werkzeug fehlt: \(name). Bitte SDK-Pfad und installierte Komponenten prüfen."
+        case .missingTool(let name): return String(localized: "Android SDK tool missing: \(name). Check the SDK path and installed components.")
         case .invalidInput(let message), .failed(let message): return message
-        case .timedOut: return "Das Android-SDK-Werkzeug hat das Zeitlimit überschritten."
-        case .cancelled: return "Vorgang abgebrochen."
-        case .outputTooLarge: return "Die Ausgabe überschreitet die erlaubte Größe."
+        case .timedOut: return String(localized: "The Android SDK tool timed out.")
+        case .cancelled: return String(localized: "Operation cancelled.")
+        case .outputTooLarge: return String(localized: "The output exceeds the allowed size.")
         }
     }
 }
@@ -108,9 +108,9 @@ public struct SDKPaths: Sendable {
     }
     public var diagnostics: [String] {
         var result: [String] = []
-        if adb == nil { result.append("Platform-Tools (adb) fehlen.") }
-        if emulator == nil { result.append("Android Emulator fehlt.") }
-        if aapt2 == nil { result.append("Build-Tools (aapt2) fehlen; APK-Metadaten können nicht gelesen werden.") }
+        if adb == nil { result.append(String(localized: "Platform-Tools (adb) are missing.")) }
+        if emulator == nil { result.append(String(localized: "Android Emulator is missing.")) }
+        if aapt2 == nil { result.append(String(localized: "Build-Tools (aapt2) are missing; APK metadata cannot be read.")) }
         return result
     }
     private func executable(_ relative: String) -> URL? {

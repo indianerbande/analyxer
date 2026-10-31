@@ -11,7 +11,7 @@ public struct AnalysisTools: Codable, Sendable, Equatable {
     public init() {}
     public static func load(_ url: URL) throws -> AnalysisTools {
         let info = try FileManager.default.attributesOfItem(atPath: url.path)
-        guard info[.type] as? FileAttributeType == .typeRegular else { throw AndroidAnalyxerError.invalidInput("Werkzeugprofil muss eine reguläre Datei sein.") }
+        guard info[.type] as? FileAttributeType == .typeRegular else { throw AndroidAnalyxerError.invalidInput(String(localized: "The tool profile must be a regular file.")) }
         let handle = try FileHandle(forReadingFrom: url)
         defer { try? handle.close() }
         var data = Data()
@@ -23,16 +23,16 @@ public struct AnalysisTools: Codable, Sendable, Equatable {
         return try JSONDecoder().decode(Self.self, from: data)
     }
     public func configuration() throws -> REAConfiguration {
-        guard let executable = try path(self.executable) else { throw AndroidAnalyxerError.invalidInput("Bitte ein lokales REA-Werkzeugprofil laden oder REA/Node auswählen.") }
+        guard let executable = try path(self.executable) else { throw AndroidAnalyxerError.invalidInput(String(localized: "Load a local REA tool profile or choose REA/Node.")) }
         return REAConfiguration(executable: executable, cliScript: try path(cliScript), jadxJAR: try path(jadxJAR), javaHome: try path(javaHome))
     }
     public func bridgeURL() throws -> URL {
-        guard let url = try path(javaBridge) else { throw AndroidAnalyxerError.invalidInput("Die kompilierte Frida-Java-Bridge fehlt im Werkzeugprofil.") }
+        guard let url = try path(javaBridge) else { throw AndroidAnalyxerError.invalidInput(String(localized: "The compiled Frida Java bridge is missing from the tool profile.")) }
         return url
     }
     private func path(_ value: String) throws -> URL? {
         if value.isEmpty { return nil }
-        guard value.hasPrefix("/"), !value.contains("\0") else { throw AndroidAnalyxerError.invalidInput("Werkzeugpfade müssen absolut sein.") }
+        guard value.hasPrefix("/"), !value.contains("\0") else { throw AndroidAnalyxerError.invalidInput(String(localized: "Tool paths must be absolute.")) }
         return URL(fileURLWithPath: value)
     }
 }
@@ -67,7 +67,7 @@ extension ProjectWorkflow {
                 if let data = error.responseJSON { detail += "\n" + String(decoding: data, as: UTF8.self) }
                 detail += "\n" + error.diagnostics
             }
-            try await store.record(kind: .failure, summary: "REA-Codeanalyse", data: Data(detail.utf8))
+            try await store.record(kind: .failure, summary: "REA code analysis", data: Data(detail.utf8))
             throw error
         }
     }
@@ -79,15 +79,15 @@ public enum REAPresentation {
         guard let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else { return String(decoding: data, as: UTF8.self) }
         let record = object["evidence"] as? [String: Any] ?? object
         var lines: [String] = []
-        if let error = object["cleanup_error"], !(error is NSNull) { lines.append("Aufräumen unvollständig: \(render(error))") }
+        if let error = object["cleanup_error"], !(error is NSNull) { lines.append(String(localized: "Cleanup incomplete: \(render(error))")) }
         for key in ["evidence_id", "operation", "authority", "confidence", "provider", "limitations"] {
             if let value = record[key] { lines.append("\(key): \(render(value))") }
         }
-        lines.append("\nBEFUNDE\n" + render(record["normalized_result"] ?? record))
+        lines.append("\n" + String(localized: "FINDINGS") + "\n" + render(record["normalized_result"] ?? record))
         return lines.joined(separator: "\n\n")
     }
     private static func render(_ value: Any, depth: Int = 0) -> String {
-        guard depth < 20 else { return "[Weitere Struktur im JSON-Befund]" }
+        guard depth < 20 else { return String(localized: "[Further structure in the JSON finding]") }
         if let string = value as? String { return string }
         if let array = value as? [Any] { return array.map { render($0, depth: depth + 1) }.joined(separator: "\n\n") }
         if let dictionary = value as? [String: Any] {

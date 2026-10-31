@@ -19,24 +19,46 @@ public struct AnalysisSession: Codable, Identifiable, Sendable {
 public enum EvidenceKind: String, Codable, Sendable {
     case staticReport, manifest, dex, installation, launch, logcat, screenshot, navigation, note, failure
     case rea, instrumentation, probeScript, networkCapture, networkReport, installedApp
+    /// Shown in the UI; follows the app language.
     public var title: String {
         switch self {
-        case .staticReport: "Statischer Bericht"
+        case .staticReport: String(localized: "Static Report")
+        case .manifest: String(localized: "Manifest")
+        case .dex: String(localized: "DEX Inventory")
+        case .installation: String(localized: "Installation")
+        case .launch: String(localized: "App Launch")
+        case .logcat: String(localized: "App Logcat")
+        case .screenshot: String(localized: "Screenshot")
+        case .navigation: String(localized: "Navigation")
+        case .note: String(localized: "Note")
+        case .failure: String(localized: "Error")
+        case .installedApp: String(localized: "Installed App Verified")
+        case .rea: String(localized: "REA Code Analysis")
+        case .instrumentation: String(localized: "Process Observation")
+        case .probeScript: String(localized: "Observation Script")
+        case .networkCapture: String(localized: "Network Capture")
+        case .networkReport: String(localized: "Network Report")
+        }
+    }
+    /// Written into project files and reports; independent of the UI language.
+    var reportTitle: String {
+        switch self {
+        case .staticReport: "Static Report"
         case .manifest: "Manifest"
-        case .dex: "DEX-Inventar"
+        case .dex: "DEX Inventory"
         case .installation: "Installation"
-        case .launch: "App-Start"
-        case .logcat: "App-Logcat"
+        case .launch: "App Launch"
+        case .logcat: "App Logcat"
         case .screenshot: "Screenshot"
         case .navigation: "Navigation"
-        case .note: "Notiz"
-        case .failure: "Fehler"
-        case .installedApp: "Installierte App geprüft"
-        case .rea: "REA-Codeanalyse"
-        case .instrumentation: "Prozessbeobachtung"
-        case .probeScript: "Beobachtungsskript"
-        case .networkCapture: "Netzwerkmitschnitt"
-        case .networkReport: "Netzwerkbericht"
+        case .note: "Note"
+        case .failure: "Error"
+        case .installedApp: "Installed App Verified"
+        case .rea: "REA Code Analysis"
+        case .instrumentation: "Process Observation"
+        case .probeScript: "Observation Script"
+        case .networkCapture: "Network Capture"
+        case .networkReport: "Network Report"
         }
     }
     var fileExtension: String {
@@ -91,7 +113,7 @@ public actor ProjectStore {
         let fm = FileManager.default
         let target = destination.standardizedFileURL
         guard target.isFileURL, !fm.fileExists(atPath: target.path), apk.isFileURL, apk.pathExtension.lowercased() == "apk" else {
-            throw AndroidAnalyxerError.invalidInput("Bitte eine APK und einen neuen, noch nicht vorhandenen Projektordner wählen.")
+            throw AndroidAnalyxerError.invalidInput(String(localized: "Choose an APK and a new project folder that does not exist yet."))
         }
         let staging = target.deletingLastPathComponent().appendingPathComponent(".android-analyxer-creating-" + UUID().uuidString)
         try fm.createDirectory(at: staging.appendingPathComponent("input"), withIntermediateDirectories: true)
@@ -103,7 +125,7 @@ public actor ProjectStore {
         var project = AnalysisProject(id: UUID(), createdAt: Date(), updatedAt: Date(), title: installed?.source.package ?? apk.deletingPathExtension().lastPathComponent,
                                       originalAPKName: installed?.files.first?.name ?? apk.lastPathComponent, apkPath: "input/application.apk", analysis: analysis)
         if let installed {
-            guard analysis.manifest.packageName == installed.source.package, installed.files.first?.sha256 == analysis.apk.sha256 else { throw AndroidAnalyxerError.failed("Importierte Basis-APK stimmt nicht mit dem Paket überein.") }
+            guard analysis.manifest.packageName == installed.source.package, installed.files.first?.sha256 == analysis.apk.sha256 else { throw AndroidAnalyxerError.failed(String(localized: "The imported base APK does not match the package.")) }
             project.schemaVersion = 3
             project.installedSource = installed.source
             project.additionalAPKs = []
@@ -112,16 +134,16 @@ public actor ProjectStore {
                 let source = try safeURL(file.relativePath, root: installed.directory)
                 let target = staging.appendingPathComponent(relative)
                 try fm.copyItem(at: source, to: target)
-                guard try ArtifactHash.sha256(target) == file.sha256 else { throw AndroidAnalyxerError.failed("Split-APK während des Imports verändert.") }
+                guard try ArtifactHash.sha256(target) == file.sha256 else { throw AndroidAnalyxerError.failed(String(localized: "A split APK changed during the import.")) }
                 let report = try await service.inspectAPK(at: target)
                 let identity = report.metadata.components(separatedBy: .newlines).first { $0.hasPrefix("package:") } ?? ""
-                guard identity.contains("name='\(project.packageName)'"), identity.contains("versionCode='\(analysis.manifest.versionCode ?? "")'") else { throw AndroidAnalyxerError.failed("Split-APK gehört nicht zur gleichen Paketversion.") }
+                guard identity.contains("name='\(project.packageName)'"), identity.contains("versionCode='\(analysis.manifest.versionCode ?? "")'") else { throw AndroidAnalyxerError.failed(String(localized: "A split APK does not belong to the same package version.")) }
                 project.additionalAPKs?.append(ProjectAPK(relativePath: relative, name: file.name, sha256: file.sha256))
             }
         }
         try fm.createDirectory(at: staging.appendingPathComponent("evidence"), withIntermediateDirectories: false)
         for (kind, text) in [(EvidenceKind.staticReport, analysis.reportText), (.manifest, analysis.manifestXML), (.dex, analysis.dexInventory)] {
-            let entry = try writeEvidence(in: staging, kind: kind, summary: kind.title, sessionID: nil, data: Data(text.utf8))
+            let entry = try writeEvidence(in: staging, kind: kind, summary: kind.reportTitle, sessionID: nil, data: Data(text.utf8))
             project.evidence.append(entry)
         }
         try encode(project).write(to: staging.appendingPathComponent("project.json"), options: .atomic)
@@ -136,10 +158,10 @@ public actor ProjectStore {
         try validate(value, root: root)
         let apk = try safeURL(value.apkPath, root: root)
         guard try ArtifactHash.sha256(apk) == value.analysis.apk.sha256 else {
-            throw AndroidAnalyxerError.failed("Die Projekt-APK wurde verändert. Hash stimmt nicht mit der Analyse überein.")
+            throw AndroidAnalyxerError.failed(String(localized: "The project APK was changed. Its hash does not match the analysis."))
         }
         for file in value.apkFiles {
-            guard try ArtifactHash.sha256(safeURL(file.relativePath, root: root)) == file.sha256 else { throw AndroidAnalyxerError.failed("APK-Satz verändert: \(file.name)") }
+            guard try ArtifactHash.sha256(safeURL(file.relativePath, root: root)) == file.sha256 else { throw AndroidAnalyxerError.failed(String(localized: "APK set changed: \(file.name)")) }
         }
         return ProjectStore(directory: root, project: value)
     }
@@ -147,35 +169,35 @@ public actor ProjectStore {
     public func snapshot() -> AnalysisProject { project }
     public func verifiedAPK() throws -> URL {
         let url = try Self.safeURL(project.apkPath, root: directory)
-        guard try ArtifactHash.sha256(url) == project.analysis.apk.sha256 else { throw AndroidAnalyxerError.failed("Projekt-APK verändert; Aktion abgebrochen.") }
+        guard try ArtifactHash.sha256(url) == project.analysis.apk.sha256 else { throw AndroidAnalyxerError.failed(String(localized: "Project APK changed; action cancelled.")) }
         return url
     }
     public func verifiedAPKs() throws -> [URL] {
         try project.apkFiles.map { try verifiedAPKComponent(path: $0.relativePath) }
     }
     public func verifiedAPKComponent(path: String) throws -> URL {
-        guard let file = project.apkFiles.first(where: { $0.relativePath == path }) else { throw AndroidAnalyxerError.invalidInput("APK gehört nicht zum Projekt.") }
+        guard let file = project.apkFiles.first(where: { $0.relativePath == path }) else { throw AndroidAnalyxerError.invalidInput(String(localized: "The APK does not belong to the project.")) }
         let url = try Self.safeURL(path, root: directory)
-        guard try ArtifactHash.sha256(url) == file.sha256 else { throw AndroidAnalyxerError.failed("APK-Satz verändert: \(file.name)") }
+        guard try ArtifactHash.sha256(url) == file.sha256 else { throw AndroidAnalyxerError.failed(String(localized: "APK set changed: \(file.name)")) }
         return url
     }
     public func evidenceURL(id: UUID) throws -> URL {
-        guard let entry = project.evidence.first(where: { $0.id == id }) else { throw AndroidAnalyxerError.invalidInput("Befund nicht gefunden.") }
+        guard let entry = project.evidence.first(where: { $0.id == id }) else { throw AndroidAnalyxerError.invalidInput(String(localized: "Finding not found.")) }
         let url = try Self.safeURL(entry.relativePath, root: directory)
-        guard try ArtifactHash.sha256(url) == entry.sha256 else { throw AndroidAnalyxerError.failed("Befunddatei verändert oder beschädigt.") }
+        guard try ArtifactHash.sha256(url) == entry.sha256 else { throw AndroidAnalyxerError.failed(String(localized: "Finding file changed or damaged.")) }
         return url
     }
     public func session(_ id: UUID) throws -> AnalysisSession {
-        guard let result = project.sessions.first(where: { $0.id == id }), result.endedAt == nil else { throw AndroidAnalyxerError.invalidInput("Testsitzung ist nicht aktiv.") }
+        guard let result = project.sessions.first(where: { $0.id == id }), result.endedAt == nil else { throw AndroidAnalyxerError.invalidInput(String(localized: "The test session is not active.")) }
         return result
     }
     public func evidenceData(id: UUID) throws -> Data {
-        guard let entry = project.evidence.first(where: { $0.id == id }) else { throw AndroidAnalyxerError.invalidInput("Befund nicht gefunden.") }
+        guard let entry = project.evidence.first(where: { $0.id == id }) else { throw AndroidAnalyxerError.invalidInput(String(localized: "Finding not found.")) }
         let url = try Self.safeURL(entry.relativePath, root: directory)
         let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
         guard size <= 32 * 1024 * 1024 else { throw AndroidAnalyxerError.outputTooLarge }
         let data = try Data(contentsOf: url)
-        guard ArtifactHash.sha256(data: data) == entry.sha256 else { throw AndroidAnalyxerError.failed("Befunddatei verändert oder beschädigt.") }
+        guard ArtifactHash.sha256(data: data) == entry.sha256 else { throw AndroidAnalyxerError.failed(String(localized: "Finding file changed or damaged.")) }
         return data
     }
     public func startSession(device: DeviceObservation) throws -> AnalysisSession {
@@ -190,7 +212,7 @@ public actor ProjectStore {
     }
     public func endSession(_ id: UUID) throws {
         try mutate { value in
-            guard let index = value.sessions.firstIndex(where: { $0.id == id }) else { throw AndroidAnalyxerError.invalidInput("Sitzung nicht gefunden.") }
+            guard let index = value.sessions.firstIndex(where: { $0.id == id }) else { throw AndroidAnalyxerError.invalidInput(String(localized: "Session not found.")) }
             value.sessions[index].endedAt = Date()
         }
     }
@@ -211,14 +233,14 @@ public actor ProjectStore {
         return entry
     }
     public func addNote(_ text: String, sessionID: UUID? = nil) throws {
-        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw AndroidAnalyxerError.invalidInput("Notiz ist leer.") }
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw AndroidAnalyxerError.invalidInput(String(localized: "The note is empty.")) }
         try record(kind: .note, summary: String(text.prefix(120)), data: Data(text.utf8), sessionID: sessionID)
     }
     public func export(to destination: URL) throws {
-        guard !FileManager.default.fileExists(atPath: destination.path) else { throw AndroidAnalyxerError.invalidInput("Export benötigt einen neuen Ordner.") }
+        guard !FileManager.default.fileExists(atPath: destination.path) else { throw AndroidAnalyxerError.invalidInput(String(localized: "The export needs a new folder.")) }
         _ = try verifiedAPKs()
         let sourceManifest = try Self.read(directory)
-        guard sourceManifest.revision == project.revision else { throw AndroidAnalyxerError.failed("Projekt wurde anderweitig geändert. Bitte erneut öffnen.") }
+        guard sourceManifest.revision == project.revision else { throw AndroidAnalyxerError.failed(String(localized: "The project was changed elsewhere. Please open it again.")) }
         let stage = destination.deletingLastPathComponent().appendingPathComponent(".android-analyxer-export-" + UUID().uuidString)
         let fm = FileManager.default
         try fm.createDirectory(at: stage.appendingPathComponent("input"), withIntermediateDirectories: true)
@@ -229,33 +251,33 @@ public actor ProjectStore {
             let source = try verifiedAPKComponent(path: file.relativePath)
             let target = stage.appendingPathComponent(file.relativePath)
             try fm.copyItem(at: source, to: target)
-            guard try ArtifactHash.sha256(target) == file.sha256 else { throw AndroidAnalyxerError.failed("APK-Satz während Export verändert.") }
+            guard try ArtifactHash.sha256(target) == file.sha256 else { throw AndroidAnalyxerError.failed(String(localized: "APK set changed during the export.")) }
         }
         for entry in project.evidence {
             let source = try evidenceURL(id: entry.id)
             let copy = stage.appendingPathComponent(entry.relativePath)
             try fm.copyItem(at: source, to: copy)
-            guard try ArtifactHash.sha256(copy) == entry.sha256 else { throw AndroidAnalyxerError.failed("Befund während des Exports verändert.") }
+            guard try ArtifactHash.sha256(copy) == entry.sha256 else { throw AndroidAnalyxerError.failed(String(localized: "A finding changed during the export.")) }
         }
         try Self.encode(project).write(to: stage.appendingPathComponent("project.json"), options: .atomic)
         try combinedReport().write(to: stage.appendingPathComponent("report.txt"), atomically: true, encoding: .utf8)
-        guard try ArtifactHash.sha256(stage.appendingPathComponent(project.apkPath)) == project.analysis.apk.sha256 else { throw AndroidAnalyxerError.failed("APK während des Exports verändert.") }
+        guard try ArtifactHash.sha256(stage.appendingPathComponent(project.apkPath)) == project.analysis.apk.sha256 else { throw AndroidAnalyxerError.failed(String(localized: "The APK changed during the export.")) }
         try fm.moveItem(at: stage, to: destination)
         done = true
     }
     public func combinedReport() throws -> String {
-        var report = project.analysis.reportText + "\nAPK-SATZ (statischer Hauptbericht: Basis-APK)\n"
+        var report = project.analysis.reportText + "\nAPK SET (main static report: base APK)\n"
         for file in project.apkFiles { report += "\(file.name) · \(file.relativePath) · SHA-256 \(file.sha256)\n" }
-        if let source = project.installedSource { report += "Import: \(source.capturedAt.ISO8601Format()) · \(source.serial) · Boot \(source.bootID)\nInstaller laut Android: \(source.installer)\n" }
-        report += "\nTESTSITZUNGEN\n"
+        if let source = project.installedSource { report += "Import: \(source.capturedAt.ISO8601Format()) · \(source.serial) · Boot \(source.bootID)\nInstaller reported by Android: \(source.installer)\n" }
+        report += "\nTEST SESSIONS\n"
         for session in project.sessions {
-            report += "\nSitzung \(session.id) · \(session.startedAt.ISO8601Format())\nGerät: \(session.device.serial) · AVD: \(session.device.avdName ?? "unbekannt/physisch")\n"
+            report += "\nSession \(session.id) · \(session.startedAt.ISO8601Format())\nDevice: \(session.device.serial) · AVD: \(session.device.avdName ?? "unknown/physical")\n"
             for key in session.device.properties.keys.sorted() { report += "\(key): \(session.device.properties[key]!)\n" }
-            report += "ADB: \(session.device.adbVersion)\nEnde: \(session.endedAt?.ISO8601Format() ?? "nicht dokumentiert")\n"
+            report += "ADB: \(session.device.adbVersion)\nEnd: \(session.endedAt?.ISO8601Format() ?? "not documented")\n"
         }
-        report += "\nBEFUNDE UND AKTIONEN\n"
+        report += "\nFINDINGS AND ACTIONS\n"
         for entry in project.evidence {
-            report += "\n\(entry.timestamp.ISO8601Format()) · \(entry.kind.title) · \(entry.summary)\nSitzung: \(entry.sessionID?.uuidString ?? "statisch/projektweit")\nDatei: \(entry.relativePath)\nSHA-256: \(entry.sha256)\n"
+            report += "\n\(entry.timestamp.ISO8601Format()) · \(entry.kind.reportTitle) · \(entry.summary)\nSession: \(entry.sessionID?.uuidString ?? "static/project-wide")\nFile: \(entry.relativePath)\nSHA-256: \(entry.sha256)\n"
             if [.note, .failure, .installation, .installedApp, .launch, .navigation].contains(entry.kind) {
                 let text = String(decoding: try evidenceData(id: entry.id), as: UTF8.self)
                 report += text + "\n"
@@ -268,11 +290,11 @@ public actor ProjectStore {
         // All cooperating writers lock the same file; revisions reject stale windows.
         let lockURL = directory.appendingPathComponent(".write-lock")
         let fd = Darwin.open(lockURL.path, O_CREAT | O_RDWR | O_NOFOLLOW, 0o600)
-        guard fd >= 0 else { throw AndroidAnalyxerError.failed("Projekt kann nicht zum Schreiben gesperrt werden.") }
+        guard fd >= 0 else { throw AndroidAnalyxerError.failed(String(localized: "The project cannot be locked for writing.")) }
         defer { _ = flock(fd, LOCK_UN); _ = Darwin.close(fd) }
-        guard flock(fd, LOCK_EX | LOCK_NB) == 0 else { throw AndroidAnalyxerError.failed("Projekt wird gerade von einer anderen Instanz gespeichert.") }
+        guard flock(fd, LOCK_EX | LOCK_NB) == 0 else { throw AndroidAnalyxerError.failed(String(localized: "Another instance is saving the project right now.")) }
         let current = try Self.read(directory)
-        guard current.id == project.id, current.revision == project.revision else { throw AndroidAnalyxerError.failed("Projekt wurde anderweitig geändert. Bitte erneut öffnen.") }
+        guard current.id == project.id, current.revision == project.revision else { throw AndroidAnalyxerError.failed(String(localized: "The project was changed elsewhere. Please open it again.")) }
         var updated = project
         try operation(&updated)
         updated.revision += 1; updated.updatedAt = Date()
@@ -296,37 +318,37 @@ public actor ProjectStore {
         guard (values.fileSize ?? 0) <= 32 * 1024 * 1024 else { throw AndroidAnalyxerError.outputTooLarge }
         let decoder = JSONDecoder(); decoder.dateDecodingStrategy = .iso8601
         let value = try decoder.decode(AnalysisProject.self, from: Data(contentsOf: url))
-        guard (1...3).contains(value.schemaVersion) else { throw AndroidAnalyxerError.invalidInput("Diese Projektversion wird noch nicht unterstützt.") }
+        guard (1...3).contains(value.schemaVersion) else { throw AndroidAnalyxerError.invalidInput(String(localized: "This project version is not supported yet.")) }
         return value
     }
     private static func validate(_ value: AnalysisProject, root: URL) throws {
         guard value.apkPath == "input/application.apk", Set(value.sessions.map(\.id)).count == value.sessions.count,
-              Set(value.evidence.map(\.id)).count == value.evidence.count else { throw AndroidAnalyxerError.invalidInput("Ungültiger Projektindex.") }
+              Set(value.evidence.map(\.id)).count == value.evidence.count else { throw AndroidAnalyxerError.invalidInput(String(localized: "Invalid project index.")) }
         for (index, file) in (value.additionalAPKs ?? []).enumerated() {
             guard value.schemaVersion >= 3, file.relativePath == "input/split-\(index + 1).apk",
-                  file.sha256.range(of: #"^[a-f0-9]{64}$"#, options: .regularExpression) != nil else { throw AndroidAnalyxerError.invalidInput("Ungültiger APK-Satz im Projekt.") }
+                  file.sha256.range(of: #"^[a-f0-9]{64}$"#, options: .regularExpression) != nil else { throw AndroidAnalyxerError.invalidInput(String(localized: "Invalid APK set in the project.")) }
             _ = try safeURL(file.relativePath, root: root)
         }
         for entry in value.evidence {
             guard entry.relativePath == "evidence/\(entry.id.uuidString).\(entry.kind.fileExtension)",
-                  entry.sessionID == nil || value.sessions.contains(where: { $0.id == entry.sessionID }) else { throw AndroidAnalyxerError.invalidInput("Ungültiger Befundpfad oder Sitzungsbezug.") }
+                  entry.sessionID == nil || value.sessions.contains(where: { $0.id == entry.sessionID }) else { throw AndroidAnalyxerError.invalidInput(String(localized: "Invalid finding path or session reference.")) }
             _ = try safeURL(entry.relativePath, root: root)
         }
     }
     private static func safeURL(_ relative: String, root: URL, requireFile: Bool = true) throws -> URL {
         guard !relative.hasPrefix("/"), !relative.split(separator: "/", omittingEmptySubsequences: false).contains(where: { $0 == ".." || $0 == "." || $0.isEmpty }) else {
-            throw AndroidAnalyxerError.invalidInput("Ungültiger Pfad im Projekt.")
+            throw AndroidAnalyxerError.invalidInput(String(localized: "Invalid path in the project."))
         }
         let canonicalRoot = root.resolvingSymlinksInPath().standardizedFileURL
         let url = canonicalRoot.appendingPathComponent(relative)
-        guard url.resolvingSymlinksInPath().path.hasPrefix(canonicalRoot.path + "/") else { throw AndroidAnalyxerError.invalidInput("Projektpfad verweist nach außerhalb.") }
+        guard url.resolvingSymlinksInPath().path.hasPrefix(canonicalRoot.path + "/") else { throw AndroidAnalyxerError.invalidInput(String(localized: "A project path points outside the project.")) }
         // Reject symlinks even when they currently resolve within the project.
         var component = canonicalRoot
         for part in relative.split(separator: "/") {
             component.appendPathComponent(String(part))
-            if (try? component.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) == true { throw AndroidAnalyxerError.invalidInput("Symbolische Links im Projekt werden nicht unterstützt.") }
+            if (try? component.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) == true { throw AndroidAnalyxerError.invalidInput(String(localized: "Symbolic links in the project are not supported.")) }
         }
-        if requireFile, (try? url.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) != true { throw AndroidAnalyxerError.invalidInput("Projektdatei fehlt: \(relative)") }
+        if requireFile, (try? url.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) != true { throw AndroidAnalyxerError.invalidInput(String(localized: "Project file missing: \(relative)")) }
         return url
     }
 }

@@ -11,7 +11,8 @@ public struct ManifestComponent: Codable, Identifiable, Sendable {
     public var actions: [String] = []
     public var categories: [String] = []
     public var data: [[String: String]] = []
-    public var exportDescription: String { exported ?? "nicht deklariert" }
+    /// Plain English: used in the static report written to disk.
+    public var exportDescription: String { exported ?? "not declared" }
 }
 
 public struct ManifestSummary: Codable, Sendable {
@@ -27,7 +28,7 @@ public struct ManifestSummary: Codable, Sendable {
     public static func parse(_ xml: String) throws -> ManifestSummary {
         // No DTDs or entity expansion: the input is an APK-derived, untrusted document.
         guard !xml.contains("<!DOCTYPE"), !xml.contains("<!ENTITY") else {
-            throw AndroidAnalyxerError.invalidInput("Manifest mit DTD/Entities wird nicht unterstützt.")
+            throw AndroidAnalyxerError.invalidInput(String(localized: "Manifests with a DTD or entities are not supported."))
         }
         let delegate = ManifestReader()
         let parser = XMLParser(data: Data(xml.utf8))
@@ -35,7 +36,7 @@ public struct ManifestSummary: Codable, Sendable {
         parser.delegate = delegate
         guard parser.parse(), let result = delegate.result, delegate.rootWasManifest,
               result.packageName.range(of: #"^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+$"#, options: .regularExpression) != nil else {
-            throw AndroidAnalyxerError.invalidInput("Android-Manifest ist unvollständig oder ungültig.")
+            throw AndroidAnalyxerError.invalidInput(String(localized: "The Android manifest is incomplete or invalid."))
         }
         return result
     }
@@ -92,19 +93,19 @@ public struct StaticAnalysis: Codable, Sendable {
     public let limitations: [String]
 
     public var reportText: String {
-        var lines = ["ANDROID ANALYXER · STATISCHE ANALYSE", "Zeit: \(observedAt.ISO8601Format())", "SHA-256: \(apk.sha256)",
-                     "Paket: \(manifest.packageName)", "Version: \(manifest.versionName ?? "unbekannt") (\(manifest.versionCode ?? "?"))",
-                     "minSdk: \(manifest.minSDK ?? "nicht deklariert") · targetSdk: \(manifest.targetSDK ?? "nicht deklariert")", "", "WERKZEUGE"]
+        var lines = ["ANDROID ANALYXER · STATIC ANALYSIS", "Time: \(observedAt.ISO8601Format())", "SHA-256: \(apk.sha256)",
+                     "Package: \(manifest.packageName)", "Version: \(manifest.versionName ?? "unknown") (\(manifest.versionCode ?? "?"))",
+                     "minSdk: \(manifest.minSDK ?? "not declared") · targetSdk: \(manifest.targetSDK ?? "not declared")", "", "TOOLS"]
         lines += tools.keys.sorted().map { "\($0): \(tools[$0]!)" }
-        lines += ["", "BERECHTIGUNGEN"] + apk.permissions
-        lines += ["", "APPLICATION-ATTRIBUTE"] + manifest.application.keys.sorted().map { "\($0)=\(manifest.application[$0]!)" }
-        lines += ["", "KOMPONENTEN (exported ist der deklarierte Wert, keine Erreichbarkeitsprüfung)"]
+        lines += ["", "PERMISSIONS"] + apk.permissions
+        lines += ["", "APPLICATION ATTRIBUTES"] + manifest.application.keys.sorted().map { "\($0)=\(manifest.application[$0]!)" }
+        lines += ["", "COMPONENTS (exported is the declared value, not a reachability check)"]
         for item in manifest.components {
-            lines += ["\(item.kind): \(item.name)", "  exported=\(item.exportDescription), enabled=\(item.enabled ?? "nicht deklariert"), permission=\(item.permission ?? "keine deklariert")"]
+            lines += ["\(item.kind): \(item.name)", "  exported=\(item.exportDescription), enabled=\(item.enabled ?? "not declared"), permission=\(item.permission ?? "none declared")"]
             lines += item.actions.map { "  action: \($0)" } + item.categories.map { "  category: \($0)" }
             for data in item.data { lines.append("  data: " + data.keys.sorted().map { "\($0)=\(data[$0]!)" }.joined(separator: ", ")) }
         }
-        lines += ["", "GRENZEN"] + limitations + ["", "AAPT2-METADATEN", apk.metadata, "", "DEX-INVENTAR", dexInventory]
+        lines += ["", "LIMITATIONS"] + limitations + ["", "AAPT2 METADATA", apk.metadata, "", "DEX INVENTORY", dexInventory]
         return lines.joined(separator: "\n") + "\n"
     }
 }
@@ -128,32 +129,33 @@ extension EmulatorService {
         let (report, xmlResult) = try await (base, xml)
         guard !xmlResult.truncated else { throw AndroidAnalyxerError.outputTooLarge }
         let summary = try ManifestSummary.parse(xmlResult.text)
+        // Limitations are stored in project.json and the report, so they stay plain English.
         var limitations = [
-            "Statische Deklarationen belegen kein Laufzeitverhalten und sind keine Sicherheitsbewertung.",
-            "Nicht deklarierte exported-/enabled-Werte bleiben offen; Android-Version, targetSdk und Berechtigungen beeinflussen die tatsächliche Erreichbarkeit.",
-            "DEX-Inventar listet Klassen und Methoden; keine Java-/Kotlin-Dekompilierung. Dynamisch geladener Code ist nicht erfasst.",
-            "JADX, native REA-Dekompilierung und Netzwerkmitschnitte sind in dieser Ausbaustufe nicht integriert."
+            "Static declarations do not prove runtime behaviour and are not a security assessment.",
+            "Undeclared exported/enabled values remain open; the Android version, targetSdk and permissions affect actual reachability.",
+            "The DEX inventory lists classes and methods; no Java/Kotlin decompilation. Dynamically loaded code is not covered.",
+            "JADX, native REA decompilation and network captures are not integrated at this stage."
         ]
         var dex = ""
         do {
             let result = try await execute(tool: paths.apkanalyzer, name: "apkanalyzer", arguments: ["dex", "packages", "--defined-only", apk.path], timeout: 120)
             dex = result.text
-            if result.truncated { limitations.append("DEX-Ausgabe auf 4 MiB begrenzt; Inventar unvollständig.") }
-        } catch { limitations.append("DEX-Inventar nicht verfügbar: \(error.localizedDescription)") }
+            if result.truncated { limitations.append("DEX output limited to 4 MiB; inventory incomplete.") }
+        } catch { limitations.append("DEX inventory not available: \(error.localizedDescription)") }
         var versions: [String: String] = [:]
         if let tool = paths.aapt2 {
             let version = try await execute(tool: tool, name: "aapt2", arguments: ["version"])
             let text = (version.text + String(decoding: version.stderr, as: UTF8.self)).trimmingCharacters(in: .whitespacesAndNewlines)
-            versions["aapt2"] = text.isEmpty ? "Version unbekannt" : text
+            versions["aapt2"] = text.isEmpty ? "Version unknown" : text
         }
         if let tool = paths.apkanalyzer {
             let properties = tool.deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("source.properties")
             let source = (try? String(contentsOf: properties, encoding: .utf8)) ?? ""
-            versions["apkanalyzer"] = source.components(separatedBy: .newlines).first { $0.hasPrefix("Pkg.Revision") } ?? "Version unbekannt"
-            versions["apkanalyzer-Pfad"] = tool.path
+            versions["apkanalyzer"] = source.components(separatedBy: .newlines).first { $0.hasPrefix("Pkg.Revision") } ?? "Version unknown"
+            versions["apkanalyzer-path"] = tool.path
         }
         let endingHash = try await Task.detached { try ArtifactHash.sha256(apk) }.value
-        guard endingHash == report.sha256 else { throw AndroidAnalyxerError.failed("Die APK wurde während der Analyse verändert.") }
+        guard endingHash == report.sha256 else { throw AndroidAnalyxerError.failed(String(localized: "The APK changed during the analysis.")) }
         return StaticAnalysis(observedAt: Date(), apk: report, manifest: summary, manifestXML: xmlResult.text, dexInventory: dex, tools: versions, limitations: limitations)
     }
 }
