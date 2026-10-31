@@ -87,6 +87,7 @@ public struct SDKPaths: Sendable {
     public var adb: URL? { executable("platform-tools/adb") }
     public var emulator: URL? { executable("emulator/emulator") }
     public var avdmanager: URL? { commandLineTool("avdmanager") }
+    public var sdkmanager: URL? { commandLineTool("sdkmanager") }
     private func commandLineTool(_ name: String) -> URL? {
         if let latest = executable("cmdline-tools/latest/bin/" + name) { return latest }
         let versions = (try? FileManager.default.contentsOfDirectory(at: root.appendingPathComponent("cmdline-tools"), includingPropertiesForKeys: nil)) ?? []

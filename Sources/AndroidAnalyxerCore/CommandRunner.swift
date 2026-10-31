@@ -7,9 +7,14 @@ public struct Command: Sendable {
     public let environment: [String: String]
     public let timeout: TimeInterval
     public let outputLimit: Int
-    public init(executable: URL, arguments: [String], timeout: TimeInterval = 30, outputLimit: Int = 4 * 1024 * 1024, environment: [String: String] = [:]) {
+    public let workingDirectory: URL?
+    /// Written to standard input, which is then closed; `nil` means no input at all.
+    public let input: Data?
+    public init(executable: URL, arguments: [String], timeout: TimeInterval = 30, outputLimit: Int = 4 * 1024 * 1024, environment: [String: String] = [:],
+                workingDirectory: URL? = nil, input: Data? = nil) {
         self.executable = executable; self.arguments = arguments
         self.timeout = timeout; self.outputLimit = outputLimit; self.environment = environment
+        self.workingDirectory = workingDirectory; self.input = input
     }
 }
 
@@ -73,10 +78,18 @@ public struct ProcessCommandRunner: CommandRunning {
         process.executableURL = command.executable
         process.arguments = command.arguments
         process.environment = ProcessInfo.processInfo.environment.merging(command.environment) { _, value in value }
-        process.standardInput = FileHandle.nullDevice
+        process.currentDirectoryURL = command.workingDirectory
+        let input = command.input.map { _ in Pipe() }
+        process.standardInput = input ?? FileHandle.nullDevice
         process.standardOutput = output; process.standardError = errors
         try process.run()
         output.fileHandleForWriting.closeFile(); errors.fileHandleForWriting.closeFile()
+        if let input, let data = command.input {
+            // Small answers only (e.g. licence confirmations); a closed reader must not raise SIGPIPE.
+            signal(SIGPIPE, SIG_IGN)
+            try? input.fileHandleForWriting.write(contentsOf: data)
+            try? input.fileHandleForWriting.close()
+        }
         let handles = [output.fileHandleForReading, errors.fileHandleForReading]
         for handle in handles { _ = fcntl(handle.fileDescriptor, F_SETFL, O_NONBLOCK) }
         defer { handles.forEach { $0.closeFile() } }

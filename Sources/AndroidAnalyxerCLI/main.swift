@@ -120,6 +120,46 @@ struct AndroidAnalyxerCLI {
             let store = try await ProjectStore.create(at: URL(fileURLWithPath: arguments[2]), apk: URL(fileURLWithPath: arguments[1]), service: service)
             print(try await store.combinedReport())
             print("Projekt: \(store.directory.path)")
+        case "setup" where arguments.count >= 2:
+            // setup check|licenses|install jdk|node|rea|jadx|frida-bridge|frida-server|android-sdk|all [--tools DIR] [--sdk DIR] [--profile FILE] [--accept-android-licenses] [--play-image]
+            var options: [String: String] = [:], flags: Set<String> = [], rest: [String] = []
+            var index = 1
+            while index < arguments.count {
+                let argument = arguments[index]
+                if ["--tools", "--sdk", "--profile"].contains(argument), index + 1 < arguments.count { options[argument] = arguments[index + 1]; index += 2; continue }
+                if argument.hasPrefix("--") { flags.insert(argument) } else { rest.append(argument) }
+                index += 1
+            }
+            let setup = ToolSetupService(toolsFolder: options["--tools"].map { URL(fileURLWithPath: $0, isDirectory: true) },
+                                         sdkRoot: options["--sdk"].map { URL(fileURLWithPath: $0, isDirectory: true) } ?? paths.root,
+                                         configured: try options["--profile"].map { try AnalysisTools.load(URL(fileURLWithPath: $0)) } ?? AnalysisTools())
+            switch rest.first {
+            case "check":
+                for status in await setup.check() {
+                    print("\(status.id.cliName.padding(toLength: 13, withPad: " ", startingAt: 0)) \(String(describing: status.state).padding(toLength: 9, withPad: " ", startingAt: 0)) \(status.version ?? "-") · \(status.location?.path ?? "-")\(status.note.map { " · " + $0 } ?? "")")
+                }
+            case "licenses":
+                let text = try await setup.androidLicenses()
+                print(text.isEmpty ? "All Android SDK licences are accepted." : text)
+            case "install" where rest.count == 2:
+                let tools = rest[1] == "all" ? ToolID.allCases : [try ToolID.allCases.first { [$0.rawValue.lowercased(), $0.cliName].contains(rest[1].lowercased()) }.orThrow(AndroidAnalyxerError.invalidInput("Unknown tool \(rest[1])."))]
+                for tool in tools {
+                    if tool == .androidSDK {
+                        let pending = flags.contains("--accept-android-licenses") ? "" : try await setup.androidLicenses()
+                        guard pending.isEmpty else {
+                            throw AndroidAnalyxerError.invalidInput("Read the licences with `setup licenses`, then repeat with --accept-android-licenses.")
+                        }
+                        if flags.contains("--accept-android-licenses") { try await setup.acceptAndroidLicenses() }
+                    }
+                    print("== \(tool.cliName)")
+                    try await setup.install(tool, includePlayImage: flags.contains("--play-image")) { message, fraction in
+                        if fraction == nil || fraction == 0 { print(message) }
+                    }
+                }
+                for status in await setup.check() where tools.contains(status.id) { print("\(status.id.cliName): \(status.state) \(status.version ?? "")") }
+            default:
+                throw AndroidAnalyxerError.invalidInput("Usage: setup check|licenses|install jdk|node|rea|jadx|frida-bridge|frida-server|android-sdk|all [--tools DIR] [--sdk DIR] [--profile FILE] [--accept-android-licenses] [--play-image]")
+            }
         case "profile" where arguments.count == 2:
             let store = try await ProjectStore.open(at: URL(fileURLWithPath: arguments[1]))
             let profile = try await AppProfileService().profile(project: await store.snapshot(), root: store.directory)
@@ -253,7 +293,7 @@ struct AndroidAnalyxerCLI {
             try logs.write(to: output.appendingPathComponent("logcat.txt"), atomically: true, encoding: .utf8)
             print("Smoke-Test bestanden. Screenshot: \(screenshot.count) Bytes. Ergebnisse: \(output.path)")
         default:
-            throw AndroidAnalyxerError.invalidInput("Verwendung: android-analyxer-cli profile PROJEKT | care SERIAL | care-smoke EMULATOR-SERIAL | installed-import SERIAL PAKET NEUER-ORDNER | project-record PROJEKT ART ZUSAMMENFASSUNG DATEI | play-images | play-create NAME API | installed-smoke EMULATOR-SERIAL lab.androidanalyxer.fixture NEUER-ORDNER | diagnose | inspect APK | project-create APK ORDNER | project-info ORDNER | rea-method PROJEKT WERKZEUGPROFIL KLASSE METHODE ÜBERLADUNG | analysis-smoke EMULATOR-SERIAL TLS-FIXTURE NEUER-ORDNER WERKZEUGPROFIL | project-smoke EMULATOR-SERIAL SYNTHETISCHE-APK NEUER-ORDNER | smoke EMULATOR-SERIAL SYNTHETISCHE-APK AUSGABEVERZEICHNIS")
+            throw AndroidAnalyxerError.invalidInput("Verwendung: android-analyxer-cli setup check|licenses|install … | profile PROJEKT | care SERIAL | care-smoke EMULATOR-SERIAL | installed-import SERIAL PAKET NEUER-ORDNER | project-record PROJEKT ART ZUSAMMENFASSUNG DATEI | play-images | play-create NAME API | installed-smoke EMULATOR-SERIAL lab.androidanalyxer.fixture NEUER-ORDNER | diagnose | inspect APK | project-create APK ORDNER | project-info ORDNER | rea-method PROJEKT WERKZEUGPROFIL KLASSE METHODE ÜBERLADUNG | analysis-smoke EMULATOR-SERIAL TLS-FIXTURE NEUER-ORDNER WERKZEUGPROFIL | project-smoke EMULATOR-SERIAL SYNTHETISCHE-APK NEUER-ORDNER | smoke EMULATOR-SERIAL SYNTHETISCHE-APK AUSGABEVERZEICHNIS")
         }
     }
 
@@ -262,4 +302,17 @@ struct AndroidAnalyxerCLI {
         print("Berechtigungen: \(report.permissions.joined(separator: ", "))")
         print("SHA-256: \(report.sha256)")
     }
+}
+
+private extension Optional {
+    func orThrow(_ error: Error) throws -> Wrapped {
+        guard let value = self else { throw error }
+        return value
+    }
+}
+
+
+private extension ToolID {
+    /// Command-line spelling, e.g. `frida-server`.
+    var cliName: String { rawValue.replacingOccurrences(of: "([a-z])([A-Z])", with: "$1-$2", options: .regularExpression).lowercased() }
 }

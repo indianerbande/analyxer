@@ -2,7 +2,7 @@ import Foundation
 
 /// Portable tool profile contains paths, never credentials. Loading a profile
 /// selects tools; execution only occurs through an explicit analysis action.
-public struct AnalysisTools: Codable, Sendable {
+public struct AnalysisTools: Codable, Sendable, Equatable {
     public var executable: String = ""
     public var cliScript: String = ""
     public var jadxJAR: String = ""

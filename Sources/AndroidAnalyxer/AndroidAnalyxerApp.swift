@@ -101,6 +101,15 @@ final class AnalyxerModel: ObservableObject {
     @Published var screenshotData: Data?
     @Published var sdkRoot: String
     @Published var customAVDHome = UserDefaults.standard.string(forKey: "avdHome")
+    @Published var toolsFolder = UserDefaults.standard.string(forKey: "toolsFolder")
+    @Published var toolStatuses: [ToolStatus] = []
+    @Published var toolInstalling: ToolID?
+    @Published var toolMessage = ""
+    @Published var toolFraction: Double?
+    @Published var confirmInstallMissing = false
+    @Published var showAndroidSetup = false
+    @Published var androidLicenseText: String?
+    @Published var includePlayImage = false
     @Published var packageFilter = ""
     @Published var logFilter = ""
     @Published var screenshotDate: Date?
@@ -527,6 +536,7 @@ struct AnalyxerView: View {
                 }
                 Spacer()
             }.padding(20).card()
+            ToolSetupView()
             sectionTitle("Android SDK", note: "Die Werkzeuge werden aus deiner lokalen Installation verwendet.")
             HStack {
                 Text(model.sdkRoot).font(.system(size: 12, design: .monospaced)).textSelection(.enabled)
