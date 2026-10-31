@@ -1,77 +1,67 @@
-# Code- und Datenflussanalyse · v0.3
+# Code and data flow analysis
 
-## Konzept
+[Deutsch](de/deep-analysis.md)
 
-Eine APK wird unverändert als Projektquelle aufbewahrt. REA/JADX untersucht diese Quelle und liefert Klassen, Methoden, dekompilierten Code und eingehende statische Referenzen. Daraus wählt der Benutzer konkrete Messpunkte für die laufende App: etwa eine Methode, die einen Request erzeugt, oder eine Methode, die eine bereits entschlüsselte Antwort verarbeitet.
+## Concept
 
-Die Laufzeitbeobachtung erfolgt über REA/Frida. Sie erfasst ausgewählte Methodenargumente, Rückgaben und Ausnahme-Typen. Die Originalmethode wird weiter ausgeführt, Rückgaben und Exceptions werden weitergereicht. Instrumentierung kann dennoch Timing und Laufzeitverhalten beeinflussen. Netzwerk-PCAPs ergänzen die Prozessbeobachtung um sichtbare Gegenstellen, Ports und Paketmengen; sie entschlüsseln keine TLS-Nutzdaten. Codefunde, Prozessereignisse und Netzverkehr sind verschiedene Belegarten, keine automatisch bewiesene Kausalkette.
+An APK is kept unchanged as the project's source. REA/JADX examines this source and returns classes, methods, decompiled code and incoming static references. From these you choose concrete probes for the running app: for example a method that builds a request, or one that processes a response that is already decrypted.
 
-Die Bedienoberfläche enthält den Abschnitt **Code und Datenflüsse untersuchen**. Alle Ergebnisse liegen im bestehenden Analyseprojekt, zusammen mit APK-Hash, Sitzung, Zeitstempeln, Gerätemetadaten, unveränderten REA-Evidence-Dateien und dem tatsächlich verwendeten Beobachtungsskript.
+Runtime observation runs through REA/Frida. It records the arguments, return values and exception types of selected methods. The original method still runs; return values and exceptions are passed on. Instrumentation can still affect timing and runtime behaviour. Network captures add visible peers, ports and packet counts to the process observation; they do not decrypt TLS payloads. Code findings, process events and network traffic are different kinds of evidence, not an automatically proven chain of cause and effect.
 
-## Lokale Werkzeuge
+In a project this is the section **2 · Examine Code and Data Flows**. All results are stored in the analysis project together with the APK hash, session, timestamps, device metadata, the unchanged REA evidence files and the observation script that was actually used.
 
-Getestet: REA 6.5.0, Node 24.15.0, JADX headless MCP 0.7.1, vollständiges JDK 25, Frida 17.23.2 und frida-java-bridge 7.0.13. Die JVM ist standardmäßig auf 1 GiB begrenzt. Werkzeuge werden als explizite Dateipfade ausgewählt; die App installiert oder lädt keine Provider automatisch.
+## Local tools
 
-Ein Werkzeugprofil ist eine kleine JSON-Datei, z. B. `.local/analysis-tools.json` (nicht versioniert). In der App **Lokale Analysewerkzeuge → Werkzeugprofil laden** wählen. Das Profil enthält nur Programmpfade, keine Zugangsdaten. Schema:
+Tested with REA 6.5.0, Node 24.15.0, JADX headless MCP 0.7.1, a full JDK 25, Frida 17.23.2 and frida-java-bridge 7.0.13; the tool manager installs REA 6.8.0 and Node 24.22.2. The JVM is limited to 1 GiB by default. **Setup → Analysis Tools** checks and installs these tools and sets the tool profile; see [Setup and tools](setup.md). **Load Tool Profile …** in the project section accepts a JSON profile instead.
 
-```json
-{
-  "executable": "/absoluter/pfad/node",
-  "cliScript": "/absoluter/pfad/rea-agents/scripts/rea.mjs",
-  "jadxJAR": "/absoluter/pfad/jadx-headless-mcp-0.7.1-all.jar",
-  "javaHome": "/absoluter/pfad/jdk/Contents/Home",
-  "javaBridge": "/absoluter/pfad/java-bridge.bundle.js"
-}
-```
+The JADX JAR comes from the official release that REA references (SHA-256 for 0.7.1: `6e5eacf500b64292bfb73c49797c1958f6ee44646e43e868039ae7feb573ff75`). `scripts/instrumentation/build-java-bridge.mjs` builds the Java bridge from an explicitly chosen local frida-java-bridge installation with Frida's compiler; the tool manager does the same automatically.
 
-Ein eigenständiges REA-Programm kann ohne `cliScript` verwendet werden. Leere optionale Pfade werden als leere Strings gespeichert. Die JADX-JAR wurde aus dem offiziellen, von REA referenzierten Release bezogen; SHA-256 `6e5eacf500b64292bfb73c49797c1958f6ee44646e43e868039ae7feb573ff75`. Alle lokalen Abhängigkeiten liegen außerhalb der verteilten App. Für die Bridge gibt es `scripts/instrumentation/build-java-bridge.mjs`; es kompiliert eine ausdrücklich gewählte lokale Installation von frida-java-bridge mit Fridas Compiler.
+## Examining an APK
 
-## APK untersuchen
+1. Open the project; the tool profile must be ready.
+2. Use **Inspect APK with REA** for package and manifest findings, or **Find Classes**.
+3. Take a fully qualified class name and choose **List Methods**.
+4. Enter the method name and, if needed, the overload index from the list; choose **Decompile** or **References**. Overload indices start at zero.
 
-1. Projekt öffnen und Werkzeugprofil auswählen.
-2. **APK mit REA untersuchen** für Paket-/Manifestbefunde oder **Klassen suchen** verwenden.
-3. Vollständigen Klassennamen übernehmen, **Methoden auflisten** wählen.
-4. Methodennamen und gegebenenfalls den zurückgegebenen Überladungsindex eintragen; **Dekompilieren** oder **Referenzen** wählen. Überladungsindizes sind nullbasiert.
+REA always analyses the verified project copy. Its answer must match the operation and the APK's SHA-256. Tool errors are stored as error findings. The preview presents the normalised finding readably; the original JSON with evidence ID, provider and limits is kept. The analysis never runs the APK. Incoming static references do not prove that a call happens at runtime.
 
-REA analysiert immer die geprüfte Projektkopie. Die Antwort muss zu Operation und APK-SHA passen. Werkzeugfehler werden als Fehlerbefunde gespeichert. Die Vorschau stellt den normalisierten Befund lesbar dar; die Original-JSON mit Evidence-ID, Provider und Grenzen bleibt erhalten. Die Analyse führt die APK nicht aus. Eingehende statische Referenzen beweisen keine tatsächlichen Laufzeitaufrufe.
+## Observing data in the process
 
-## Daten im Prozess beobachten
+This needs a prepared analysis device with a matching frida-server running on guest port 27042. The identity check also needs readable `/proc/<PID>/cmdline` and `/proc/<PID>/stat`; on the tested Google APIs image adbd runs as root for that. A root frida-server alone does not guarantee these ADB permissions. The app does not enable root, does not start frida-server and does not change certificates. Regular Google Play images are not suitable without further preparation; everyday use of them is a separate device mode.
 
-Voraussetzung ist ein vorbereitetes Analysegerät mit passendem laufendem Frida-Server auf Gast-Port 27042. Die Identitätsprüfung benötigt außerdem lesbare `/proc/<PID>/cmdline` und `/proc/<PID>/stat`; im geprüften Google-APIs-Testimage läuft dafür adbd mit Root-Rechten. Ein Root-Frida-Server allein garantiert diese ADB-Leserechte nicht. Die App aktiviert Root nicht selbst, startet keinen Server und verändert keine Zertifikate. Reguläre Google-Play-Images sind hierfür ohne zusätzliche Vorbereitung nicht geeignet; ihre normale Verwendung bleibt ein eigener Gerätemodus.
+1. Start a test session, install the project APK and launch it.
+2. Enter the class and method from the code analysis.
+3. Enter the exact Java argument types, separated by commas, for example `java.lang.String` or `[B`; empty means no parameters. The static overload index is not used here: what counts is the actual list of Java types.
+4. Choose the duration and press **Observe Method**. Use the app in the Android window while it records.
+5. Open the process finding and the recording context in the evidence list.
 
-1. Testsitzung beginnen, Projekt-APK installieren und starten.
-2. Die konkrete Klasse und Methode aus der Codeanalyse eintragen.
-3. Exakte Java-Argumenttypen eintragen, durch Komma getrennt, beispielsweise `java.lang.String` oder `[B`; leer bedeutet keine Parameter. Die statische Überladungsnummer wird hier nicht verwendet: Entscheidend ist die tatsächliche Java-Typenliste.
-4. Dauer wählen und **Methode beobachten** drücken. Während der Aufnahme die App im Android-Fenster bedienen.
-5. Prozessbefund und Aufnahmekontext in der Befundliste öffnen.
+Before recording, the installed APKs are pulled over ADB and checked against the project's complete APK set. Imported base/split sets are supported; a single base APK cannot vouch for a split installation. Static REA queries refer to the APK chosen in the picker. The target is the app's unique main process. Boot ID, process name and process start time bind the recording; a device change, a restart or a reused PID causes an error. The dynamic ADB port forward is removed after recording; Frida detaches and the app keeps running.
 
-Vor der Aufnahme werden installierte APKs per ADB übertragen und gegen den vollständigen APK-Satz des Projekts geprüft. V0.4 unterstützt importierte Basis-/Split-Sätze; eine einzelne Basis-APK kann eine Split-Installation nicht belegen. Statische REA-Abfragen beziehen sich jeweils auf die im Auswahlfeld gewählte APK. Das Ziel ist der eindeutige App-Hauptprozess. Boot-ID, Prozessname und Prozess-Startzeit binden die Aufnahme; Gerätewechsel, Neustart oder PID-Wiederverwendung führen zu einem Fehler. Die eigene dynamische ADB-Portweiterleitung wird nach der Aufnahme entfernt; Frida wird abgehängt, die App läuft weiter.
+The interface offers one probe per recording; the core API supports up to eight. Primitive values, strings and byte arrays are recorded; other objects stay opaque. No streams are read and no arbitrary object methods are called for display. Defaults: 200 calls and 4,096 characters per value, at most 60 seconds. Limits and truncated values are marked. Calls already running or finished before the hook was installed are missing. No observed call only means that no matching call was registered during the recording window.
 
-Die Oberfläche bietet einen Messpunkt pro Aufnahme; die Core-API unterstützt bis zu acht. Erfasst werden primitive Werte, Strings und Bytearrays; sonstige Objekte bleiben opak. Es werden keine Streams gelesen und keine beliebigen Objektmethoden zur Darstellung aufgerufen. Standard: 200 Aufrufe und 4096 Zeichen je Wert, maximal 60 Sekunden. Grenzen und abgeschnittene Werte werden markiert. Bereits laufende oder vor Installation des Hooks abgeschlossene Aufrufe fehlen. Kein beobachteter Aufruf bedeutet nur, dass im Aufnahmefenster kein passender Aufruf registriert wurde.
+This is targeted Java observation, not automatic capture of every HTTP library, JNI/native function or secondary process. Reflection, dynamic class loaders, native TLS stacks and additional content encryption may need other probes or further adapters. Certificate pinning is not changed.
 
-Es handelt sich um gezielte Java-Beobachtung, nicht um automatische Erfassung sämtlicher HTTP-Bibliotheken, JNI-/Native-Funktionen oder Nebenprozesse. Reflexion, dynamische Klassenloader, native TLS-Stacks und zusätzliche Inhaltsverschlüsselung können andere Messpunkte oder weitere Adapter erfordern. Zertifikat-Pinning wird nicht verändert.
+## Network capture
 
-## Netzwerkaufzeichnung
+**Record Mobile/WAN** uses the SDK emulator console. With emulator 37.1.11 it captures the legacy WAN/cellular path, not the modern netsim Wi-Fi. It replaces a console capture that is already running. The app does not change guest network settings. Recording lasts at most 60 seconds; up to 32 MiB are kept. If the limit is exceeded, the recording is stopped and discarded.
 
-**Mobilfunk/WAN aufnehmen** nutzt die SDK-Konsole. Bei Emulator 37.1.11 erfasst sie den Legacy-WAN/Cellular-Pfad, nicht das moderne netsim-WLAN. Sie ersetzt einen bereits laufenden Konsolenmitschnitt. Die App ändert keine Gastnetzwerkeinstellungen. Aufnahme maximal 60 Sekunden; bis zu 32 MiB werden übernommen. Bei Überschreitung wird die Aufnahme gestoppt und verworfen.
+**Import PCAP …** takes external classic PCAP files of up to 32 MiB. Their origin, capture device and relation to the active session stay explicitly unverified. PCAPNG is not supported. The built-in parser shows the packet count, visible IPv4/IPv6 endpoints and TCP/UDP ports. It supports Ethernet/VLAN, Linux cooked v1/v2 and raw IP; fragmented packets and IPv6 extension headers are evaluated only partly. It does not reconstruct TCP streams, DNS names, HTTP bodies or TLS plaintext.
 
-**PCAP importieren** nimmt externe klassische PCAP-Dateien bis 32 MiB auf. Herkunft, Aufnahmegerät und Zuordnung zur aktiven Sitzung bleiben ausdrücklich unbestätigt. PCAPNG ist nicht unterstützt. Der lokale Parser zeigt Paketanzahl, sichtbare IPv4-/IPv6-Endpunkte und TCP-/UDP-Ports. Er unterstützt Ethernet/VLAN, Linux cooked v1/v2 und rohe IP-Pakete; fragmentierte Pakete und IPv6-Erweiterungsheader haben begrenzte Auswertung. Er rekonstruiert keine TCP-Streams, DNS-Namen, HTTP-Bodies oder TLS-Klartexte.
+Device traffic can include Android, Google services and other apps. Closeness in time to an action does not prove which app caused it. The complete PCAP is exported with its hash and can be examined further in a suitable external tool. REA's Linux/Windows PCAP provider is not assumed on macOS.
 
-Geräteverkehr kann Android, Google-Dienste und andere Apps enthalten. Zeitliche Nähe zur Bedienaktion beweist keine App-Zuordnung. Der vollständige PCAP wird mit Hash exportiert und kann in einem geeigneten externen Werkzeug weiter untersucht werden. REAs Linux/Windows-PCAP-Provider wird auf macOS nicht stillschweigend vorausgesetzt.
+## Reproducible local HTTPS test
 
-## Reproduzierbarer lokaler HTTPS-Nachweis
-
-`scripts/build-fixture.sh` erzeugt die synthetische APK und ein lokales Testzertifikat mit IP-SAN `10.0.2.2`. Der private Testschlüssel liegt nur unter `.local/tls`. Die Fixture vertraut ausschließlich diesem Zertifikat für ihren festen lokalen Testendpunkt; Hostname-Prüfung bleibt aktiv. Normaler Start löst keine Netzwerkaufrufe aus. Nur das explizite Intent-Extra `run_tls=true` startet acht synthetische HTTPS-Austausche.
+`scripts/build-fixture.sh` builds the synthetic APK and a local test certificate with the IP SAN `10.0.2.2`. The private test key stays under `.local/tls`. The fixture trusts only this certificate for its fixed local test endpoint; hostname verification stays on. A normal start makes no network calls. Only the explicit intent extra `run_tls=true` starts eight synthetic HTTPS exchanges.
 
 ```sh
 scripts/build-fixture.sh
 python3 scripts/fixture-tls-server.py
-# In einem zweiten Terminal, mit vorbereitetem isolierten Testemulator:
+# In a second terminal, with a prepared, isolated test emulator:
 swift run --disable-sandbox android-analyxer-cli analysis-smoke emulator-5580 \
-  .local/fixture/android-analyxer-fixture.apk .local/neuer-analysetest.androidlab \
+  .local/fixture/android-analyxer-fixture.apk .local/new-analysis-test.androidlab \
   .local/analysis-tools.json
 ```
 
-Der Server bindet ausschließlich `127.0.0.1:18443`. Der Test akzeptiert nur das Fixture-Paket. Er dekompiliert `buildRequest(String)`, installiert die geprüfte APK und beobachtet `buildRequest` und `consumeResponse` während echter lokaler TLS-Kommunikation. Anschließend prüft er Klartextmarker und den Export-Roundtrip. Kein externer Dienst und keine privaten APKs werden benötigt.
+The server binds only `127.0.0.1:18443`. The test accepts only the fixture package. It decompiles `buildRequest(String)`, installs the verified APK and observes `buildRequest` and `consumeResponse` during real local TLS traffic. It then checks plaintext markers and the export round trip. No external service and no private APKs are needed.
 
-Primärreferenzen: [REA](https://github.com/morluto/rea), [Frida Android](https://frida.re/docs/android/), [Frida JavaScript API](https://frida.re/docs/javascript-api/), [Android Emulator console](https://developer.android.com/studio/run/emulator-console), [Advanced networking](https://developer.android.com/studio/run/emulator-networking-advanced).
+References: [REA](https://github.com/morluto/rea), [Frida on Android](https://frida.re/docs/android/), [Frida JavaScript API](https://frida.re/docs/javascript-api/), [Android Emulator console](https://developer.android.com/studio/run/emulator-console), [Advanced emulator networking](https://developer.android.com/studio/run/emulator-networking-advanced).
