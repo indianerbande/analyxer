@@ -60,13 +60,13 @@ References: [APK Analyzer CLI](https://developer.android.com/tools/apkanalyzer),
 ## Reproducible check
 
 ```sh
-CLANG_MODULE_CACHE_PATH="$TMPDIR/android-analyxer-clang-cache" swift test --disable-sandbox
-swift run --disable-sandbox android-analyxer-cli project-create \
-  .local/fixture/android-analyxer-fixture.apk .local/my-analysis.androidlab
-swift run --disable-sandbox android-analyxer-cli project-info .local/my-analysis.androidlab
+CLANG_MODULE_CACHE_PATH="$TMPDIR/analyxer-clang-cache" swift test --disable-sandbox
+swift run --disable-sandbox analyxer-cli project-create \
+  .local/fixture/analyxer-fixture.apk .local/my-analysis.androidlab
+swift run --disable-sandbox analyxer-cli project-info .local/my-analysis.androidlab
 # Only on an explicitly chosen, disposable test emulator:
-swift run --disable-sandbox android-analyxer-cli project-smoke emulator-5580 \
-  .local/fixture/android-analyxer-fixture.apk .local/new-project-test.androidlab
+swift run --disable-sandbox analyxer-cli project-smoke emulator-5580 \
+  .local/fixture/analyxer-fixture.apk .local/new-project-test.androidlab
 ```
 
 `project-smoke` accepts only the synthetic fixture package and an emulator serial. It checks installation, launch, navigation, logs, screenshot, note, session end, reopening and the export round trip through the same core APIs as the interface.

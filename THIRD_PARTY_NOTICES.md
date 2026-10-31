@@ -1,6 +1,6 @@
 # Third-party tools
 
-Android Analyxer itself is licensed under the [MIT licence](LICENSE) and has no third-party Swift dependencies. At runtime it calls external tools. **None of them is part of this repository or of the built app.** You install them yourself, or the tool manager in Setup downloads them on your explicit request from their official sources; each comes under its own licence.
+Analyxer itself is licensed under the [MIT licence](LICENSE) and has no third-party Swift dependencies. At runtime it calls external tools. **None of them is part of this repository or of the built app.** You install them yourself, or the tool manager in Setup downloads them on your explicit request from their official sources; each comes under its own licence.
 
 | Tool | Used for | Source | Licence |
 |---|---|---|---|
@@ -12,6 +12,6 @@ Android Analyxer itself is licensed under the [MIT licence](LICENSE) and has no 
 | JADX headless MCP (`jadx-headless-mcp-*-all.jar`) | Java/Kotlin decompilation for REA | the project's GitHub release | check its licence before redistributing; it bundles JADX (Apache 2.0) and smali/baksmali (BSD), among others |
 | Frida: `frida-server`, `frida-java-bridge`, `frida-compile`, the `frida` Node module | observing Java methods in the app process | [frida.re](https://frida.re), npm, GitHub releases | LGPL 2.0 with wxWindows Library Exception 3.1 |
 
-If you distribute a built Android Analyxer together with any of these tools, you must comply with their licence terms yourself. The app never downloads tools silently: Setup names the source and size of each download and waits for your confirmation.
+If you distribute a built Analyxer together with any of these tools, you must comply with their licence terms yourself. The app never downloads tools silently: Setup names the source and size of each download and waits for your confirmation.
 
 Android is a trademark of Google LLC.

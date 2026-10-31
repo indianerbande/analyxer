@@ -57,8 +57,8 @@ Geräteverkehr kann Android, Google-Dienste und andere Apps enthalten. Zeitliche
 scripts/build-fixture.sh
 python3 scripts/fixture-tls-server.py
 # In einem zweiten Terminal, mit vorbereitetem, isoliertem Testemulator:
-swift run --disable-sandbox android-analyxer-cli analysis-smoke emulator-5580 \
-  .local/fixture/android-analyxer-fixture.apk .local/new-analysis-test.androidlab \
+swift run --disable-sandbox analyxer-cli analysis-smoke emulator-5580 \
+  .local/fixture/analyxer-fixture.apk .local/new-analysis-test.androidlab \
   .local/analysis-tools.json
 ```
 

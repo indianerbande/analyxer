@@ -2,7 +2,7 @@
 
 [English](../setup.md)
 
-Android Analyxer enthält keinen Code von Drittanbietern. Er ruft externe Werkzeuge auf: das Android SDK für Emulatoren und APK-Metadaten, ein JDK und für Code- und Laufzeitanalyse REA mit Node.js, JADX headless MCP und Frida. **Einrichtung → Analysewerkzeuge** prüft sie alle und installiert auf Wunsch, was fehlt.
+Analyxer enthält keinen Code von Drittanbietern. Er ruft externe Werkzeuge auf: das Android SDK für Emulatoren und APK-Metadaten, ein JDK und für Code- und Laufzeitanalyse REA mit Node.js, JADX headless MCP und Frida. **Einrichtung → Analysewerkzeuge** prüft sie alle und installiert auf Wunsch, was fehlt.
 
 ## Prüfung
 
@@ -65,10 +65,10 @@ Das Profil enthält nur Programmpfade, keine Zugangsdaten. Ein eigenständiges R
 Dieselbe Werkzeugverwaltung steht in der CLI zur Verfügung:
 
 ```sh
-swift run --disable-sandbox android-analyxer-cli setup check --tools /Volumes/Data/analyxer-tools
-swift run --disable-sandbox android-analyxer-cli setup install frida-server --tools /Volumes/Data/analyxer-tools --profile tools.json
-swift run --disable-sandbox android-analyxer-cli setup licenses --sdk /Volumes/Data/android-sdk
-swift run --disable-sandbox android-analyxer-cli setup install android-sdk --sdk /Volumes/Data/android-sdk --accept-android-licenses
+swift run --disable-sandbox analyxer-cli setup check --tools /Volumes/Data/analyxer-tools
+swift run --disable-sandbox analyxer-cli setup install frida-server --tools /Volumes/Data/analyxer-tools --profile tools.json
+swift run --disable-sandbox analyxer-cli setup licenses --sdk /Volumes/Data/android-sdk
+swift run --disable-sandbox analyxer-cli setup install android-sdk --sdk /Volumes/Data/android-sdk --accept-android-licenses
 ```
 
 Werkzeuge: `jdk`, `node`, `rea`, `jadx`, `frida-bridge`, `frida-server`, `android-sdk` oder `all`. `--profile` liest ein vorhandenes Werkzeugprofil, damit Werkzeuge außerhalb des Werkzeugordners zählen. `--play-image` fügt das Google-Play-Systemimage hinzu. `install android-sdk` verweigert den Start, bis die Lizenzen angenommen sind, entweder vorher oder mit `--accept-android-licenses`, nachdem sie mit `setup licenses` gelesen wurden.

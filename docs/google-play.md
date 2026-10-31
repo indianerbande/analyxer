@@ -4,7 +4,7 @@
 
 ## Using a Play device
 
-1. Open Android Analyxer, choose **Devices**, and under **Create Google Play Device** create a device from an installed official Google Play system image (tablet or phone).
+1. Open Analyxer, choose **Devices**, and under **Create Google Play Device** create a device from an installed official Google Play system image (tablet or phone).
 2. Leave **Keep changes permanently** on and start the device. Android opens in its own emulator window.
 3. Once Android has started, choose **Open Google Play**. Sign in with your own Google account in the Android window and install apps from the store. Google may update its system apps first.
 4. **Installed Apps → Load Apps**. Filter by package name and choose **Investigate …**. Save a new `.androidlab` folder.

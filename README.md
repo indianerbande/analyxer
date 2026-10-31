@@ -1,8 +1,8 @@
-# Android Analyxer
+# Analyxer
 
 [Deutsch](README.de.md)
 
-A native macOS workspace for Android emulators, APK analysis and device care. Android Analyxer runs the emulator from the official Android SDK in its own window and adds what the SDK leaves to the command line: Google Play devices you keep, a plain-language profile of every app you examine, analysis projects that keep evidence together, code analysis with [REA](https://github.com/morluto/rea) and JADX, targeted runtime observation with Frida, and cleanup tools for the device itself.
+A native macOS workspace for Android emulators, APK analysis and device care. Analyxer runs the emulator from the official Android SDK in its own window and adds what the SDK leaves to the command line: Google Play devices you keep, a plain-language profile of every app you examine, analysis projects that keep evidence together, code analysis with [REA](https://github.com/morluto/rea) and JADX, targeted runtime observation with Frida, and cleanup tools for the device itself.
 
 The app is written in SwiftUI, has no third-party Swift dependencies and runs everything locally. It does not upload APKs anywhere.
 
@@ -26,10 +26,10 @@ You need Xcode with Swift 6 or later.
 
 ```sh
 scripts/build-app.sh
-open '/Applications/Android Analyxer.app'
+open '/Applications/Analyxer.app'
 ```
 
-The script builds `dist/Android Analyxer.app`, signs it ad hoc and replaces `/Applications/Android Analyxer.app`. The app is not notarized; there are no binary releases yet.
+The script builds `dist/Analyxer.app`, signs it ad hoc and replaces `/Applications/Analyxer.app`. The app is not notarized; there are no binary releases yet.
 
 ### 2. Set up the tools
 
@@ -68,25 +68,25 @@ German versions are in [docs/de](docs/de).
 
 ## Responsible use
 
-Android Analyxer is meant for apps you are allowed to examine: your own apps, apps you test on behalf of their owner, and research that respects the law and the terms that apply to you. Decompiling, observing or redistributing someone else's app may be restricted by copyright, licence terms or local law. Do not use the device care functions on devices you do not own or manage. You are responsible for what you analyse and what you do with the results.
+Analyxer is meant for apps you are allowed to examine: your own apps, apps you test on behalf of their owner, and research that respects the law and the terms that apply to you. Decompiling, observing or redistributing someone else's app may be restricted by copyright, licence terms or local law. Do not use the device care functions on devices you do not own or manage. You are responsible for what you analyse and what you do with the results.
 
 Observation through Frida needs a prepared analysis device. The app does not root devices, does not install certificates and does not bypass certificate pinning.
 
 ## Development
 
 ```sh
-CLANG_MODULE_CACHE_PATH="$TMPDIR/android-analyxer-clang-cache" swift test --disable-sandbox
-swift run --disable-sandbox android-analyxer-cli diagnose
-swift run --disable-sandbox android-analyxer-cli setup check
-swift run --disable-sandbox android-analyxer-cli care emulator-5554
-swift run --disable-sandbox android-analyxer-cli profile path/to/project.androidlab
+CLANG_MODULE_CACHE_PATH="$TMPDIR/analyxer-clang-cache" swift test --disable-sandbox
+swift run --disable-sandbox analyxer-cli diagnose
+swift run --disable-sandbox analyxer-cli setup check
+swift run --disable-sandbox analyxer-cli care emulator-5554
+swift run --disable-sandbox analyxer-cli profile path/to/project.androidlab
 ```
 
 `--disable-sandbox` concerns the Swift package manifest process, not macOS security. The test suite (86 tests) needs no Android device.
 
-- `Sources/AndroidAnalyxer`: SwiftUI app
-- `Sources/AndroidAnalyxerCore`: SDK and process adapters, static analysis, app profile, projects, device care, tool manager
-- `Sources/AndroidAnalyxerCLI`: diagnostics, setup and integration tests
+- `Sources/Analyxer`: SwiftUI app
+- `Sources/AnalyxerCore`: SDK and process adapters, static analysis, app profile, projects, device care, tool manager
+- `Sources/AnalyxerCLI`: diagnostics, setup and integration tests
 - `Resources/Localization`: German translation (English is the source language)
 - `fixture/`, `scripts/build-fixture.sh`: a synthetic test app built from source with the local SDK
 
@@ -94,8 +94,8 @@ End-to-end tests run only on an emulator you name explicitly and accept only the
 
 ```sh
 scripts/build-fixture.sh
-swift run --disable-sandbox android-analyxer-cli smoke emulator-5580 \
-  .local/fixture/android-analyxer-fixture.apk .local/smoke
+swift run --disable-sandbox analyxer-cli smoke emulator-5580 \
+  .local/fixture/analyxer-fixture.apk .local/smoke
 ```
 
 `care SERIAL` prints storage, the largest apps and leftovers and changes nothing. `care-smoke EMULATOR-SERIAL` runs every care action once (it disables and restores YouTube, clears caches, creates and deletes an artificial leftover) and is meant only for a disposable emulator.
@@ -108,4 +108,4 @@ Store sign-in and downloads with a user account are not yet tested end to end. N
 
 MIT, see [LICENSE](LICENSE). The external tools (Android SDK, JDK, Node.js, REA, JADX, Frida) are not part of this repository or the app and come under their own licences; see [third-party notices](THIRD_PARTY_NOTICES.md).
 
-Android is a trademark of Google LLC. Android Analyxer is an independent project and is not affiliated with or endorsed by Google.
+Android is a trademark of Google LLC. Analyxer is an independent project and is not affiliated with or endorsed by Google.

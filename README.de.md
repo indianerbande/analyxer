@@ -1,8 +1,8 @@
-# Android Analyxer
+# Analyxer
 
 [English](README.md)
 
-Native macOS-Arbeitsumgebung für Android-Emulatoren, APK-Analyse und Gerätepflege. Android Analyxer betreibt den Emulator des offiziellen Android SDK in einem eigenen Fenster und ergänzt, was das SDK der Kommandozeile überlässt: dauerhafte Google-Play-Geräte, einen Steckbrief in Klartext für jede untersuchte App, Analyseprojekte, die Belege zusammenhalten, Codeanalyse mit [REA](https://github.com/morluto/rea) und JADX, gezielte Laufzeitbeobachtung mit Frida und Pflegewerkzeuge für das Gerät selbst.
+Native macOS-Arbeitsumgebung für Android-Emulatoren, APK-Analyse und Gerätepflege. Analyxer betreibt den Emulator des offiziellen Android SDK in einem eigenen Fenster und ergänzt, was das SDK der Kommandozeile überlässt: dauerhafte Google-Play-Geräte, einen Steckbrief in Klartext für jede untersuchte App, Analyseprojekte, die Belege zusammenhalten, Codeanalyse mit [REA](https://github.com/morluto/rea) und JADX, gezielte Laufzeitbeobachtung mit Frida und Pflegewerkzeuge für das Gerät selbst.
 
 Die App ist in SwiftUI geschrieben, hat keine Swift-Abhängigkeiten von Drittanbietern und arbeitet vollständig lokal. Sie lädt keine APKs irgendwohin hoch.
 
@@ -26,10 +26,10 @@ Du brauchst Xcode mit Swift 6 oder neuer.
 
 ```sh
 scripts/build-app.sh
-open '/Applications/Android Analyxer.app'
+open '/Applications/Analyxer.app'
 ```
 
-Das Skript baut `dist/Android Analyxer.app`, signiert es ad hoc und ersetzt `/Applications/Android Analyxer.app`. Die App ist nicht notarisiert; fertige Binärversionen gibt es noch nicht.
+Das Skript baut `dist/Analyxer.app`, signiert es ad hoc und ersetzt `/Applications/Analyxer.app`. Die App ist nicht notarisiert; fertige Binärversionen gibt es noch nicht.
 
 ### 2. Werkzeuge einrichten
 
@@ -68,25 +68,25 @@ Die englischen Seiten in [docs](docs) sind die Hauptfassung.
 
 ## Verantwortungsvoller Einsatz
 
-Android Analyxer ist für Apps gedacht, die du untersuchen darfst: eigene Apps, Apps, die du im Auftrag ihres Inhabers testest, und Forschung, die das Gesetz und die für dich geltenden Bedingungen beachtet. Dekompilieren, Beobachten oder Weitergeben fremder Apps kann durch Urheberrecht, Lizenzbedingungen oder örtliches Recht eingeschränkt sein. Die Gerätepflege nicht auf Geräten verwenden, die dir nicht gehören oder die du nicht verwaltest. Du bist verantwortlich dafür, was du analysierst und was du mit den Ergebnissen tust.
+Analyxer ist für Apps gedacht, die du untersuchen darfst: eigene Apps, Apps, die du im Auftrag ihres Inhabers testest, und Forschung, die das Gesetz und die für dich geltenden Bedingungen beachtet. Dekompilieren, Beobachten oder Weitergeben fremder Apps kann durch Urheberrecht, Lizenzbedingungen oder örtliches Recht eingeschränkt sein. Die Gerätepflege nicht auf Geräten verwenden, die dir nicht gehören oder die du nicht verwaltest. Du bist verantwortlich dafür, was du analysierst und was du mit den Ergebnissen tust.
 
 Die Beobachtung über Frida benötigt ein vorbereitetes Analysegerät. Die App rootet keine Geräte, installiert keine Zertifikate und umgeht kein Zertifikat-Pinning.
 
 ## Entwicklung
 
 ```sh
-CLANG_MODULE_CACHE_PATH="$TMPDIR/android-analyxer-clang-cache" swift test --disable-sandbox
-swift run --disable-sandbox android-analyxer-cli diagnose
-swift run --disable-sandbox android-analyxer-cli setup check
-swift run --disable-sandbox android-analyxer-cli care emulator-5554
-swift run --disable-sandbox android-analyxer-cli profile path/to/project.androidlab
+CLANG_MODULE_CACHE_PATH="$TMPDIR/analyxer-clang-cache" swift test --disable-sandbox
+swift run --disable-sandbox analyxer-cli diagnose
+swift run --disable-sandbox analyxer-cli setup check
+swift run --disable-sandbox analyxer-cli care emulator-5554
+swift run --disable-sandbox analyxer-cli profile path/to/project.androidlab
 ```
 
 `--disable-sandbox` betrifft den Swift-Paketmanifest-Prozess, nicht macOS-Systemschutz. Die Testsuite (86 Tests) benötigt kein Android-Gerät.
 
-- `Sources/AndroidAnalyxer`: SwiftUI-Oberfläche
-- `Sources/AndroidAnalyxerCore`: SDK- und Prozessadapter, statische Analyse, Steckbrief, Projekte, Gerätepflege, Werkzeugverwaltung
-- `Sources/AndroidAnalyxerCLI`: Diagnose, Einrichtung und Integrationstests
+- `Sources/Analyxer`: SwiftUI-Oberfläche
+- `Sources/AnalyxerCore`: SDK- und Prozessadapter, statische Analyse, Steckbrief, Projekte, Gerätepflege, Werkzeugverwaltung
+- `Sources/AnalyxerCLI`: Diagnose, Einrichtung und Integrationstests
 - `Resources/Localization`: deutsche Übersetzung (Englisch ist die Ausgangssprache)
 - `fixture/`, `scripts/build-fixture.sh`: eine synthetische Test-App, mit dem lokalen SDK aus dem Quellcode gebaut
 
@@ -94,8 +94,8 @@ End-to-End-Tests laufen nur auf einem ausdrücklich genannten Emulator und akzep
 
 ```sh
 scripts/build-fixture.sh
-swift run --disable-sandbox android-analyxer-cli smoke emulator-5580 \
-  .local/fixture/android-analyxer-fixture.apk .local/smoke
+swift run --disable-sandbox analyxer-cli smoke emulator-5580 \
+  .local/fixture/analyxer-fixture.apk .local/smoke
 ```
 
 `care SERIAL` gibt Speicher, die größten Apps und App-Reste aus und ändert nichts. `care-smoke EMULATOR-SERIAL` führt jede Pflegeaktion einmal aus (YouTube deaktivieren und wiederherstellen, Caches leeren, künstlichen App-Rest anlegen und löschen) und ist nur für einen entbehrlichen Emulator gedacht.
@@ -108,4 +108,4 @@ Store-Anmeldung und Downloads mit einem Benutzerkonto sind noch nicht durchgehen
 
 MIT, siehe [LICENSE](LICENSE). Die externen Werkzeuge (Android SDK, JDK, Node.js, REA, JADX, Frida) sind weder Teil dieses Repositorys noch der App und stehen unter eigenen Lizenzen; siehe [Hinweise zu Fremdwerkzeugen](THIRD_PARTY_NOTICES.md) (englisch).
 
-Android ist eine Marke der Google LLC. Android Analyxer ist ein unabhängiges Projekt, das weder mit Google verbunden ist noch von Google unterstützt wird.
+Android ist eine Marke der Google LLC. Analyxer ist ein unabhängiges Projekt, das weder mit Google verbunden ist noch von Google unterstützt wird.

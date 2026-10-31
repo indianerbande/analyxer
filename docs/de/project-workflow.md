@@ -60,13 +60,13 @@ Referenzen: [APK Analyzer CLI](https://developer.android.com/tools/apkanalyzer),
 ## Reproduzierbare Prüfung
 
 ```sh
-CLANG_MODULE_CACHE_PATH="$TMPDIR/android-analyxer-clang-cache" swift test --disable-sandbox
-swift run --disable-sandbox android-analyxer-cli project-create \
-  .local/fixture/android-analyxer-fixture.apk .local/my-analysis.androidlab
-swift run --disable-sandbox android-analyxer-cli project-info .local/my-analysis.androidlab
+CLANG_MODULE_CACHE_PATH="$TMPDIR/analyxer-clang-cache" swift test --disable-sandbox
+swift run --disable-sandbox analyxer-cli project-create \
+  .local/fixture/analyxer-fixture.apk .local/my-analysis.androidlab
+swift run --disable-sandbox analyxer-cli project-info .local/my-analysis.androidlab
 # Nur auf einem ausdrücklich gewählten, entbehrlichen Testemulator:
-swift run --disable-sandbox android-analyxer-cli project-smoke emulator-5580 \
-  .local/fixture/android-analyxer-fixture.apk .local/new-project-test.androidlab
+swift run --disable-sandbox analyxer-cli project-smoke emulator-5580 \
+  .local/fixture/analyxer-fixture.apk .local/new-project-test.androidlab
 ```
 
 `project-smoke` akzeptiert ausschließlich das synthetische Fixture-Paket und eine Emulator-Seriennummer. Es prüft Installation, Start, Navigation, Logs, Screenshot, Notiz, Sitzungsende, Wiederöffnen und Export-Roundtrip über dieselben Core-APIs wie die Oberfläche.

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="lab.androidanalyxer.fixture"
+    package="lab.analyxer.fixture"
     android:versionCode="1"
     android:versionName="1.0">
     <uses-sdk android:minSdkVersion="23" android:targetSdkVersion="34" />
@@ -10,7 +10,7 @@
     <application
         android:allowBackup="false"
         android:debuggable="true"
-        android:label="Android Analyxer Test"
+        android:label="Analyxer Test"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
         <activity
             android:name=".MainActivity"

@@ -4,7 +4,7 @@
 
 ## Ein Play-Gerät verwenden
 
-1. Android Analyxer öffnen, **Geräte** auswählen und unter **Google-Play-Gerät anlegen** ein Gerät aus einem installierten offiziellen Google-Play-Systemimage erstellen (Tablet oder Telefon).
+1. Analyxer öffnen, **Geräte** auswählen und unter **Google-Play-Gerät anlegen** ein Gerät aus einem installierten offiziellen Google-Play-Systemimage erstellen (Tablet oder Telefon).
 2. **Änderungen dauerhaft speichern** eingeschaltet lassen und das Gerät starten. Android öffnet sich in einem eigenen Emulatorfenster.
 3. Wenn Android gestartet ist, **Google Play öffnen** wählen. Im Android-Fenster mit dem eigenen Google-Konto anmelden und Apps aus dem Store installieren. Google kann zunächst seine System-Apps aktualisieren.
 4. **Installierte Apps → Apps laden**. Nach Paketname filtern und **Untersuchen …** wählen. Einen neuen `.androidlab`-Ordner speichern.

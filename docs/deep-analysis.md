@@ -57,8 +57,8 @@ Device traffic can include Android, Google services and other apps. Closeness in
 scripts/build-fixture.sh
 python3 scripts/fixture-tls-server.py
 # In a second terminal, with a prepared, isolated test emulator:
-swift run --disable-sandbox android-analyxer-cli analysis-smoke emulator-5580 \
-  .local/fixture/android-analyxer-fixture.apk .local/new-analysis-test.androidlab \
+swift run --disable-sandbox analyxer-cli analysis-smoke emulator-5580 \
+  .local/fixture/analyxer-fixture.apk .local/new-analysis-test.androidlab \
   .local/analysis-tools.json
 ```
 

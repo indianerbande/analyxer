@@ -2,18 +2,18 @@
 import PackageDescription
 
 let package = Package(
-    name: "AndroidAnalyxer",
+    name: "Analyxer",
     platforms: [.macOS(.v14)],
     products: [
-        .executable(name: "AndroidAnalyxer", targets: ["AndroidAnalyxer"]),
-        .executable(name: "android-analyxer-cli", targets: ["AndroidAnalyxerCLI"]),
-        .library(name: "AndroidAnalyxerCore", targets: ["AndroidAnalyxerCore"])
+        .executable(name: "Analyxer", targets: ["Analyxer"]),
+        .executable(name: "analyxer-cli", targets: ["AnalyxerCLI"]),
+        .library(name: "AnalyxerCore", targets: ["AnalyxerCore"])
     ],
     targets: [
-        .target(name: "AndroidAnalyxerCore"),
-        .executableTarget(name: "AndroidAnalyxer", dependencies: ["AndroidAnalyxerCore"]),
-        .executableTarget(name: "AndroidAnalyxerCLI", dependencies: ["AndroidAnalyxerCore"]),
-        .testTarget(name: "AndroidAnalyxerCoreTests", dependencies: ["AndroidAnalyxerCore"])
+        .target(name: "AnalyxerCore"),
+        .executableTarget(name: "Analyxer", dependencies: ["AnalyxerCore"]),
+        .executableTarget(name: "AnalyxerCLI", dependencies: ["AnalyxerCore"]),
+        .testTarget(name: "AnalyxerCoreTests", dependencies: ["AnalyxerCore"])
     ],
     swiftLanguageModes: [.v5]
 )

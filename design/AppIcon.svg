@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Android Analyxer – App-Icon. Eigenständige Grafik (kein Android-Roboter / Play-Logo).
+<!-- Analyxer – App-Icon. Eigenständige Grafik (kein Android-Roboter / Play-Logo).
      Motiv: gestapelte 3D-Ebenen (Marke der App, APK-Analyse) + Play-Dreieck (Laufzeitbeobachtung).
      Palette aus der App: Akzent-Teal #30CEB8, dunkler Hintergrund #0E1217. -->
 <svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">

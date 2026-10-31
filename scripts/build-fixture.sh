@@ -57,7 +57,7 @@ mkdir -p "$fixture_output/assets" "$project_root/.local/tls"
 if [[ ! -f "$project_root/.local/tls/cert.pem" ]]; then
     openssl req -x509 -newkey rsa:2048 -nodes -days 30 \
         -keyout "$project_root/.local/tls/key.pem" -out "$project_root/.local/tls/cert.pem" \
-        -subj '/CN=Android Analyxer Local Fixture' \
+        -subj '/CN=Analyxer Local Fixture' \
         -addext 'subjectAltName=IP:10.0.2.2,IP:127.0.0.1,DNS:localhost' >/dev/null 2>&1
     chmod 600 "$project_root/.local/tls/key.pem"
 fi
@@ -68,10 +68,10 @@ mkdir -p "$build_dir/classes" "$build_dir/dex"
 
 "$java_root/bin/javac" -source 8 -target 8 -bootclasspath "$android_jar" \
     -d "$build_dir/classes" \
-    "$project_root/fixture/src/lab/androidanalyxer/fixture/MainActivity.java"
+    "$project_root/fixture/src/lab/analyxer/fixture/MainActivity.java"
 "$build_tools/d8" --lib "$android_jar" --min-api 23 \
     --output "$build_dir/dex" \
-    "$build_dir/classes/lab/androidanalyxer/fixture/"*.class
+    "$build_dir/classes/lab/analyxer/fixture/"*.class
 "$build_tools/aapt2" link -I "$android_jar" \
     -A "$fixture_output/assets" \
     --manifest "$project_root/fixture/AndroidManifest.xml" \
@@ -84,9 +84,9 @@ if [[ ! -f "$keystore_path" ]]; then
     "$java_root/bin/keytool" -genkeypair -noprompt \
         -keystore "$keystore_path" -storepass android -keypass android \
         -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \
-        -dname "CN=Android Analyxer Fixture,OU=Local Development,O=Android Analyxer,C=DE"
+        -dname "CN=Analyxer Fixture,OU=Local Development,O=Analyxer,C=DE"
 fi
-apk_path="$fixture_output/android-analyxer-fixture.apk"
+apk_path="$fixture_output/analyxer-fixture.apk"
 "$build_tools/apksigner" sign --ks "$keystore_path" --ks-key-alias androiddebugkey \
     --ks-pass pass:android --key-pass pass:android \
     --out "$apk_path" "$build_dir/aligned.apk"

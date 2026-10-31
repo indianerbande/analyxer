@@ -2,7 +2,7 @@
 
 [Deutsch](de/setup.md)
 
-Android Analyxer contains no third-party code. It calls external tools: the Android SDK for emulators and APK metadata, a JDK, and for code and runtime analysis REA with Node.js, JADX headless MCP and Frida. **Setup → Analysis Tools** checks all of them and installs what is missing on request.
+Analyxer contains no third-party code. It calls external tools: the Android SDK for emulators and APK metadata, a JDK, and for code and runtime analysis REA with Node.js, JADX headless MCP and Frida. **Setup → Analysis Tools** checks all of them and installs what is missing on request.
 
 ## Checking
 
@@ -65,10 +65,10 @@ The profile holds program paths only, no credentials. A standalone REA executabl
 The same tool manager is available in the CLI:
 
 ```sh
-swift run --disable-sandbox android-analyxer-cli setup check --tools /Volumes/Data/analyxer-tools
-swift run --disable-sandbox android-analyxer-cli setup install frida-server --tools /Volumes/Data/analyxer-tools --profile tools.json
-swift run --disable-sandbox android-analyxer-cli setup licenses --sdk /Volumes/Data/android-sdk
-swift run --disable-sandbox android-analyxer-cli setup install android-sdk --sdk /Volumes/Data/android-sdk --accept-android-licenses
+swift run --disable-sandbox analyxer-cli setup check --tools /Volumes/Data/analyxer-tools
+swift run --disable-sandbox analyxer-cli setup install frida-server --tools /Volumes/Data/analyxer-tools --profile tools.json
+swift run --disable-sandbox analyxer-cli setup licenses --sdk /Volumes/Data/android-sdk
+swift run --disable-sandbox analyxer-cli setup install android-sdk --sdk /Volumes/Data/android-sdk --accept-android-licenses
 ```
 
 Tools: `jdk`, `node`, `rea`, `jadx`, `frida-bridge`, `frida-server`, `android-sdk` or `all`. `--profile` reads an existing tool profile so that tools outside the tools folder count. `--play-image` adds the Google Play system image. `install android-sdk` refuses to run until the licences are accepted, either earlier or with `--accept-android-licenses` after reading them with `setup licenses`.

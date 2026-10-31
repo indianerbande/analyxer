@@ -6,11 +6,11 @@ sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-$HOME/Library/Android/sdk}}"
 build_tools="$sdk_root/build-tools/${FIXTURE_BUILD_TOOLS:-37.0.0}"
 export JAVA_HOME="${FIXTURE_JAVA_HOME:-$(/usr/libexec/java_home)}"
 fixture_output="$PWD/.local/fixture"
-[[ -f "$fixture_output/android-analyxer-fixture.apk" ]] || scripts/build-fixture.sh
+[[ -f "$fixture_output/analyxer-fixture.apk" ]] || scripts/build-fixture.sh
 split_work="$(mktemp -d "$fixture_output/split.XXXXXX")"
 trap 'rm -rf "$split_work"' EXIT
 cat > "$split_work/AndroidManifest.xml" <<'XML'
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="lab.androidanalyxer.fixture" split="config.lab" android:versionCode="1" android:versionName="1.0">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="lab.analyxer.fixture" split="config.lab" android:versionCode="1" android:versionName="1.0">
   <uses-sdk android:minSdkVersion="23" android:targetSdkVersion="34"/>
   <application android:hasCode="false"/>
 </manifest>
