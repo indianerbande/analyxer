@@ -23,8 +23,9 @@ struct AndroidAnalyxerApp: App {
 }
 
 enum Workspace: String, CaseIterable, Identifiable {
-    case projects = "Analyseprojekte", devices = "Geräte", apk = "APK-Analyse", packages = "Installierte Apps", care = "Gerätepflege", logs = "Logcat", setup = "Einrichtung"
+    case projects = "Analysis Projects", devices = "Devices", apk = "APK Analysis", packages = "Installed Apps", care = "Device Care", logs = "Logcat", setup = "Setup"
     var id: String { rawValue }
+    var title: LocalizedStringKey { LocalizedStringKey(rawValue) }
     var icon: String {
         switch self {
         case .projects: "folder.badge.gearshape"
@@ -36,15 +37,15 @@ enum Workspace: String, CaseIterable, Identifiable {
         case .setup: "slider.horizontal.3"
         }
     }
-    var subtitle: String {
+    var subtitle: LocalizedStringKey {
         switch self {
-        case .projects: "APK, statische Befunde und Testsitzungen an einem Ort."
-        case .devices: "Android starten. Apps ausprobieren. Verhalten untersuchen."
-        case .apk: "Manifest-Metadaten und Berechtigungen direkt aus einer APK."
-        case .packages: "Apps des ausgewählten Geräts mit Speicherbedarf, Herkunft und Pflege."
-        case .care: "Speicher und Aufräumen auf dem ausgewählten Gerät."
-        case .logs: "Die letzten 1.500 Log-Einträge des ausgewählten Geräts."
-        case .setup: "Lokale Werkzeuge für deine Android-Arbeitsumgebung."
+        case .projects: "APK, static findings and test sessions in one place."
+        case .devices: "Start Android. Try apps. Investigate behaviour."
+        case .apk: "Manifest metadata and permissions straight from an APK."
+        case .packages: "Apps on the selected device with storage, origin and care actions."
+        case .care: "Storage and cleanup on the selected device."
+        case .logs: "The last 1,500 log entries of the selected device."
+        case .setup: "Local tools for your Android workspace."
         }
     }
 }
@@ -52,6 +53,8 @@ enum Workspace: String, CaseIterable, Identifiable {
 @MainActor
 final class AnalyxerModel: ObservableObject {
     @Published var page: Workspace = .projects
+    let launchLanguage = AppLanguage.stored
+    @Published var appLanguage = AppLanguage.stored { didSet { appLanguage.store() } }
     @Published var project: AnalysisProject?
     @Published var projectDirectory: URL?
     @Published var appProfile: AppProfile?
@@ -349,7 +352,7 @@ struct AnalyxerView: View {
                     Button { model.page = page } label: {
                         HStack(spacing: 12) {
                             Image(systemName: page.icon).frame(width: 22)
-                            Text(page.rawValue).font(.system(size: 13, weight: model.page == page ? .semibold : .regular))
+                            Text(page.title).font(.system(size: 13, weight: model.page == page ? .semibold : .regular))
                             Spacer()
                         }.padding(12).foregroundStyle(model.page == page ? accent : Color.primary.opacity(0.75))
                             .background(model.page == page ? accent.opacity(0.1) : .clear, in: RoundedRectangle(cornerRadius: 9))
@@ -367,7 +370,7 @@ struct AnalyxerView: View {
     private var header: some View {
         HStack {
             VStack(alignment: .leading, spacing: 6) {
-                Text(model.page.rawValue).font(.system(size: 26, weight: .semibold))
+                Text(model.page.title).font(.system(size: 26, weight: .semibold))
                 Text(model.page.subtitle).font(.callout).foregroundStyle(.secondary)
             }
             Spacer()
@@ -510,6 +513,20 @@ struct AnalyxerView: View {
     }
     private var setupPage: some View {
         VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Language").font(.headline)
+                Text("Follows the system language unless you choose one here.").font(.caption).foregroundStyle(.secondary)
+            }
+            HStack(spacing: 14) {
+                Picker("Language", selection: $model.appLanguage) {
+                    ForEach(AppLanguage.allCases) { Text($0.title).tag($0) }
+                }.pickerStyle(.segmented).labelsHidden().frame(maxWidth: 360)
+                if model.appLanguage != model.launchLanguage {
+                    Text("Takes effect after a restart.").font(.caption).foregroundStyle(.orange)
+                    Button("Restart Now") { model.restartApp() }
+                }
+                Spacer()
+            }.padding(20).card()
             sectionTitle("Android SDK", note: "Die Werkzeuge werden aus deiner lokalen Installation verwendet.")
             HStack {
                 Text(model.sdkRoot).font(.system(size: 12, design: .monospaced)).textSelection(.enabled)

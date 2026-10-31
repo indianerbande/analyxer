@@ -8,6 +8,8 @@ APP="$PWD/dist/Android Analyxer.app"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN_DIR/AndroidAnalyxer" "$APP/Contents/MacOS/AndroidAnalyxer"
 cp "$PWD/Resources/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
+rm -rf "$APP/Contents/Resources/"*.lproj
+cp -R "$PWD/Resources/Localization/"*.lproj "$APP/Contents/Resources/"
 cat > "$APP/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -16,6 +18,8 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 <key>CFBundleIdentifier</key><string>at.reitboeck.android-analyxer</string>
 <key>CFBundleName</key><string>Android Analyxer</string>
 <key>CFBundleDisplayName</key><string>Android Analyxer</string>
+<key>CFBundleDevelopmentRegion</key><string>en</string>
+<key>CFBundleLocalizations</key><array><string>en</string><string>de</string></array>
 <key>CFBundleIconFile</key><string>AppIcon</string>
 <key>CFBundleIconName</key><string>AppIcon</string>
 <key>CFBundlePackageType</key><string>APPL</string>

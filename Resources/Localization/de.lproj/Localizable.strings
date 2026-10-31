@@ -1,0 +1,26 @@
+/* German translation. Keys are the English source texts. */
+
+/* Pages */
+"Analysis Projects" = "Analyseprojekte";
+"Devices" = "Geräte";
+"APK Analysis" = "APK-Analyse";
+"Installed Apps" = "Installierte Apps";
+"Device Care" = "Gerätepflege";
+"Logcat" = "Logcat";
+"Setup" = "Einrichtung";
+"APK, static findings and test sessions in one place." = "APK, statische Befunde und Testsitzungen an einem Ort.";
+"Start Android. Try apps. Investigate behaviour." = "Android starten. Apps ausprobieren. Verhalten untersuchen.";
+"Manifest metadata and permissions straight from an APK." = "Manifest-Metadaten und Berechtigungen direkt aus einer APK.";
+"Apps on the selected device with storage, origin and care actions." = "Apps des ausgewählten Geräts mit Speicherbedarf, Herkunft und Pflege.";
+"Storage and cleanup on the selected device." = "Speicher und Aufräumen auf dem ausgewählten Gerät.";
+"The last 1,500 log entries of the selected device." = "Die letzten 1.500 Log-Einträge des ausgewählten Geräts.";
+"Local tools for your Android workspace." = "Lokale Werkzeuge für deine Android-Arbeitsumgebung.";
+
+/* Language */
+"Language" = "Sprache";
+"Follows the system language unless you choose one here." = "Folgt der Systemsprache, solange du hier keine wählst.";
+"System" = "System";
+"English" = "English";
+"Deutsch" = "Deutsch";
+"Takes effect after a restart." = "Wirkt nach einem Neustart.";
+"Restart Now" = "Jetzt neu starten";
