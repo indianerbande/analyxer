@@ -11,7 +11,7 @@
 5. Der Import sichert die Basis-APK und alle aktuell installierten Split-APKs, analysiert das Basis-Manifest und prüft die vorhandene Installation. **Projekt-App starten**, App bedienen, Screenshots und Logcat speichern oder unter **Code und Datenflüsse untersuchen** eine APK an REA übergeben.
 6. Nach einem Neustart oder erneutem Öffnen eines Projekts eine neue Testsitzung beginnen und **Installierte App zuordnen** wählen. Nach einem App-Update neu importieren, wenn die Hashes nicht mehr übereinstimmen.
 
-Die laufende Store-App wird beim Import nicht ersetzt. Konten und App-Daten liegen im dauerhaften AVD, nicht im Analyseprojekt. Der temporäre Modus verwirft Änderungen beim Beenden des Emulators. Beide Modi starten mit `-no-snapshot -no-metrics`; dauerhafte Benutzerdaten benötigen keine Snapshots.
+Die laufende Store-App wird beim Import nicht ersetzt. Konten und App-Daten liegen im dauerhaften AVD, nicht im Analyseprojekt. Der temporäre Modus verwirft Änderungen beim Beenden des Emulators. Beide Modi starten mit `-no-snapshot -no-metrics`; dauerhafte Benutzerdaten benötigen keine Snapshots. Außerdem starten sie mit `-gpu host -memory 4096`, weil der Emulator Android-16-Images bei automatischer Wahl auf der CPU rendert. Diese beiden Optionen übersteuern für den jeweiligen Lauf die im AVD gespeicherten GPU- und RAM-Einstellungen, und Apps sehen die GPU des Mac als Renderer.
 
 ## Geräteverwaltung
 

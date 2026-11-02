@@ -45,13 +45,15 @@ public struct EmulatorService: Sendable {
     }
 
     /// A temporary writable overlay permits testing without persisting guest changes
-    /// to the existing AVD. Snapshots and emulator metrics are disabled.
+    /// to the existing AVD. Snapshots and emulator metrics are disabled. The Mac's GPU and
+    /// 4 GB of RAM are requested because the emulator's automatic choice renders Android 16
+    /// images on the CPU, which is slow enough to trigger System UI startup ANRs.
     public func start(avd: AVD, persistent: Bool = false) async throws {
         guard !avd.name.isEmpty, !avd.name.contains(where: { $0.isNewline || $0 == "\0" }) else {
             throw AnalyxerError.invalidInput(String(localized: "Invalid AVD name."))
         }
         guard let emulator = paths.emulator else { throw AnalyxerError.missingTool("emulator") }
-        try await runner.launch(Command(executable: emulator, arguments: ["-avd", avd.name] + (persistent ? [] : ["-read-only"]) + ["-no-snapshot", "-no-metrics"], environment: avd.home.map { ["ANDROID_AVD_HOME": $0.path] } ?? [:]))
+        try await runner.launch(Command(executable: emulator, arguments: ["-avd", avd.name] + (persistent ? [] : ["-read-only"]) + ["-no-snapshot", "-no-metrics", "-gpu", "host", "-memory", "4096"], environment: avd.home.map { ["ANDROID_AVD_HOME": $0.path] } ?? [:]))
     }
 
     /// Keep Android's key-based IME available alongside the Mac keyboard.

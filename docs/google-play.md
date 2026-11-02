@@ -11,7 +11,7 @@
 5. The import keeps the base APK and all currently installed split APKs, analyses the base manifest and verifies the existing installation. **Launch Project App**, use the app, save screenshots and logcat, or hand an APK to REA under **Examine Code and Data Flows**.
 6. After a restart or when you reopen a project, start a new test session and choose **Adopt Installed App**. After an app update, import again if the hashes no longer match.
 
-The running store app is not replaced during the import. Accounts and app data live in the persistent AVD, not in the analysis project. Temporary mode discards changes when the emulator quits. Both modes start with `-no-snapshot -no-metrics`; persistent user data does not need snapshots.
+The running store app is not replaced during the import. Accounts and app data live in the persistent AVD, not in the analysis project. Temporary mode discards changes when the emulator quits. Both modes start with `-no-snapshot -no-metrics`; persistent user data does not need snapshots. They also start with `-gpu host -memory 4096`, because the emulator's automatic choice renders Android 16 images on the CPU. These two options override the GPU and RAM settings stored in the AVD for that run, and apps see the Mac's GPU as their renderer.
 
 ## Managing devices
 

@@ -74,6 +74,7 @@ final class PlayWorkflowTests: XCTestCase {
         XCTAssertFalse(command.arguments.contains("-read-only"))
         XCTAssertFalse(command.arguments.contains("-wipe-data"))
         XCTAssertTrue(command.arguments.contains("-no-snapshot"))
+        XCTAssertEqual(Array(command.arguments.suffix(4)), ["-gpu", "host", "-memory", "4096"])
     }
     func testSplitCapturePreservesAllBytesOriginAndBaseOrdering() async throws {
         let capture = try await capture()

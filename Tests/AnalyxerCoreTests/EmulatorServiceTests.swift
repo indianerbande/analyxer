@@ -54,7 +54,7 @@ final class EmulatorServiceTests: XCTestCase {
         let name = "Tablet with spaces;$(echo injected)"
         try await EmulatorService(paths: SDKPaths(root: root), runner: runner).start(avd: AVD(name: name))
         let command = await runner.recorded().first!
-        XCTAssertEqual(command.arguments, ["-avd", name, "-read-only", "-no-snapshot", "-no-metrics"])
+        XCTAssertEqual(command.arguments, ["-avd", name, "-read-only", "-no-snapshot", "-no-metrics", "-gpu", "host", "-memory", "4096"])
     }
 
     func testScreenKeyboardEnablesKeysAndVerifiesAndroidSettings() async throws {
