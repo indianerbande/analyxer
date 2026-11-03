@@ -61,6 +61,14 @@ Tools you already have are detected and used where they are.
 
 Choose where your own devices live under **Setup → My Devices**. By default that is a folder `avd` next to the SDK.
 
+## Getting into REA
+
+Analyxer was inspired by [REA (Reverse Engineer Anything)](https://github.com/morluto/rea) and is a practical way to start with REA on Android. The tool manager sets up REA together with JADX and Frida, so there is no toolchain to assemble by hand. Each project keeps REA's findings with the APK they came from, including the unchanged evidence files. To practise, build the small synthetic app with `scripts/build-fixture.sh` and open it as a project; the [code and data flow guide](docs/deep-analysis.md) uses the same app.
+
+Analyxer covers REA's Android side: Java and Kotlin code, and observing Java methods in the running app, which needs a prepared analysis device. REA itself reaches further, with native binaries, JavaScript and Electron apps, .NET assemblies and websites. For that, go to [rea.tools](https://rea.tools/).
+
+Analyxer is an independent project and is not affiliated with or endorsed by the REA project. REA has its own [responsible-use guidance](https://github.com/morluto/rea/blob/main/DISCLAIMER.md).
+
 ## Documentation
 
 - [Setup and tools](docs/setup.md): tool manager, sources, checksums, tool profile, command line
