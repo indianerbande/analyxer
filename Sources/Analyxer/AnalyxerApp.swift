@@ -5,9 +5,11 @@ import AnalyxerCore
 
 @main
 struct AnalyxerApp: App {
+    static let mainWindow = "main"
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var model = AnalyxerModel()
     var body: some Scene {
-        WindowGroup("Analyxer") {
+        WindowGroup("Analyxer", id: Self.mainWindow) {
             AnalyxerView().environmentObject(model)
                 .frame(minWidth: 1020, minHeight: 700)
                 .task { await model.refresh() }
@@ -15,10 +17,48 @@ struct AnalyxerApp: App {
         .defaultSize(width: 1200, height: 820)
         .commands {
             CommandGroup(replacing: .newItem) {
-                Button("Analyse APK …") { model.chooseAPK() }.keyboardShortcut("o")
+                AnalyseAPKCommand(model: model)
                 Button("Refresh Devices") { Task { await model.refresh() } }.keyboardShortcut("r")
             }
+            CommandGroup(before: .windowList) { ShowMainWindowCommand() }
         }
+    }
+}
+
+@MainActor
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    static var openWindow: OpenWindowAction?
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
+        if !hasVisibleWindows { Self.openWindow?.showMainWindow() }
+        return hasVisibleWindows
+    }
+}
+
+extension OpenWindowAction {
+    @MainActor func showMainWindow() {
+        if let window = NSApp.windows.first(where: { $0.isMiniaturized || ($0.isVisible && $0.canBecomeMain) }) {
+            window.makeKeyAndOrderFront(nil)
+        } else {
+            self(id: AnalyxerApp.mainWindow)
+        }
+    }
+}
+
+struct ShowMainWindowCommand: View {
+    @Environment(\.openWindow) private var openWindow
+    var body: some View {
+        Button("Analyxer") { openWindow.showMainWindow() }.keyboardShortcut("0")
+    }
+}
+
+struct AnalyseAPKCommand: View {
+    let model: AnalyxerModel
+    @Environment(\.openWindow) private var openWindow
+    var body: some View {
+        Button("Analyse APK …") {
+            openWindow.showMainWindow()
+            model.chooseAPK()
+        }.keyboardShortcut("o")
     }
 }
 
@@ -299,6 +339,7 @@ final class AnalyxerModel: ObservableObject {
 
 struct AnalyxerView: View {
     @EnvironmentObject var model: AnalyxerModel
+    @Environment(\.openWindow) private var openWindow
     private let accent = Color(red: 0.19, green: 0.81, blue: 0.72)
     var body: some View {
         HStack(spacing: 0) {
@@ -340,6 +381,7 @@ struct AnalyxerView: View {
         .sheet(item: $model.evidencePreview) { preview in EvidencePreviewView(preview: preview) }
         .tint(accent)
         .preferredColorScheme(.dark)
+        .onAppear { AppDelegate.openWindow = openWindow }
         .task {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(6))
