@@ -64,4 +64,21 @@ swift run --disable-sandbox analyxer-cli analysis-smoke emulator-5580 \
 
 The server binds only `127.0.0.1:18443`. The test accepts only the fixture package. It decompiles `buildRequest(String)`, installs the verified APK and observes `buildRequest` and `consumeResponse` during real local TLS traffic. It then checks plaintext markers and the export round trip. No external service and no private APKs are needed.
 
+### Trying it in the app
+
+The same observation works by hand on an SDK emulator, because `10.0.2.2` only reaches the Mac from there. Keep the server running and prepare the device as described under [Observing data in the process](#observing-data-in-the-process).
+
+1. Open `.local/fixture/analyxer-fixture.apk` as a project.
+2. Enter `lab.analyxer.fixture.MainActivity` and `buildRequest`, then choose **Decompile**.
+3. Start a test session, install the APK and launch it.
+4. Enter `java.lang.String` as the argument type and press **Observe Method**.
+5. Trigger the exchanges while it records:
+
+```sh
+adb -s emulator-5580 shell am start -W -f 536870912 \
+  -n lab.analyxer.fixture/.MainActivity --ez run_tls true
+```
+
+The flag reuses the running activity, so the observed process stays the same. The fixture's button only increases a counter and never calls `buildRequest`; without this command the recording stays empty. The exchanges are about 1.5 seconds apart, so a recording that ends early catches only some of them.
+
 References: [REA](https://github.com/morluto/rea), [Frida on Android](https://frida.re/docs/android/), [Frida JavaScript API](https://frida.re/docs/javascript-api/), [Android Emulator console](https://developer.android.com/studio/run/emulator-console), [Advanced emulator networking](https://developer.android.com/studio/run/emulator-networking-advanced).
